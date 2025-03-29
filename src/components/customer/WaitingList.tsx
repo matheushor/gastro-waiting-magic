@@ -1,0 +1,196 @@
+
+import React, { useState } from "react";
+import { Customer } from "@/types";
+import { Clock, AlertCircle, X } from "lucide-react";
+import { formatWaitingTime } from "@/utils/geoUtils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+
+interface WaitingListProps {
+  customers: Customer[];
+  onLeaveQueue: (id: string) => void;
+}
+
+const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) => {
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [confirmPhone, setConfirmPhone] = useState("");
+  const [error, setError] = useState("");
+
+  // Sort customers by status and timestamp
+  const sortedCustomers = [...customers].sort((a, b) => {
+    // First, put called customers at the top
+    if (a.status === "called" && b.status !== "called") return -1;
+    if (a.status !== "called" && b.status === "called") return 1;
+    
+    // Then sort by timestamp (earliest first)
+    return a.timestamp - b.timestamp;
+  });
+
+  // Assign positions to waiting customers
+  let waitingPosition = 1;
+  sortedCustomers.forEach(customer => {
+    if (customer.status === "waiting") {
+      customer.position = waitingPosition++;
+    } else if (customer.status === "called") {
+      customer.position = 0; // Being served
+    } else {
+      customer.position = undefined; // Not in the queue anymore
+    }
+  });
+
+  const handleLeaveQueueClick = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setConfirmPhone("");
+    setError("");
+    setOpenDialog(true);
+  };
+
+  const handleConfirmLeaveQueue = () => {
+    if (!selectedCustomer) return;
+    
+    if (confirmPhone !== selectedCustomer.phone) {
+      setError("Telefone não confere. Tente novamente.");
+      return;
+    }
+    
+    onLeaveQueue(selectedCustomer.id);
+    setOpenDialog(false);
+    toast.success("Você saiu da fila com sucesso!");
+  };
+
+  const renderPreferences = (customer: Customer) => {
+    const { preferences } = customer;
+    const activePreferences = [];
+    
+    if (preferences.pregnant) activePreferences.push("Gestante");
+    if (preferences.elderly) activePreferences.push("Idoso");
+    if (preferences.disabled) activePreferences.push("PCD");
+    if (preferences.infant) activePreferences.push("Criança de colo");
+    if (preferences.withDog) activePreferences.push("Com cachorro");
+    if (preferences.indoor) activePreferences.push("Mesa interna");
+    else activePreferences.push("Mesa externa");
+    
+    return activePreferences.map((pref, index) => (
+      <span key={index} className="preference-tag">
+        {pref}
+      </span>
+    ));
+  };
+
+  if (sortedCustomers.length === 0) {
+    return (
+      <div className="bg-white p-6 rounded-lg shadow-md max-w-md w-full mx-auto text-center">
+        <h2 className="text-xl font-bold text-gastro-blue mb-2">Fila de Espera</h2>
+        <div className="py-8">
+          <p className="text-gastro-gray mb-2">Não há clientes na fila no momento.</p>
+          <p className="text-sm text-gastro-gray">Seja o primeiro a entrar!</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-md max-w-md w-full mx-auto">
+      <h2 className="text-xl font-bold text-gastro-blue mb-4">Fila de Espera</h2>
+      
+      <div className="space-y-3">
+        {sortedCustomers.map((customer) => (
+          <div 
+            key={customer.id} 
+            className={`border rounded-lg p-4 relative ${
+              customer.status === "called" 
+                ? "border-gastro-orange bg-orange-50" 
+                : "border-gastro-lightGray"
+            }`}
+          >
+            {customer.status === "called" && (
+              <div className="absolute -top-2 -right-2 bg-gastro-orange text-white text-xs px-2 py-1 rounded-full animate-pulse-slow">
+                Chamando
+              </div>
+            )}
+            
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="font-medium">{customer.name}</h3>
+                <div className="flex items-center text-sm text-gastro-gray">
+                  <span className="mr-2">{customer.partySize} {customer.partySize > 1 ? 'pessoas' : 'pessoa'}</span>
+                  <div className="flex items-center">
+                    <Clock className="h-3 w-3 mr-1" />
+                    <span className="waiting-time">
+                      {formatWaitingTime(customer.timestamp)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              {customer.position !== undefined && (
+                <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                  customer.status === "called" 
+                    ? "bg-gastro-orange text-white" 
+                    : "bg-gastro-blue text-white"
+                }`}>
+                  {customer.status === "called" ? "0" : customer.position}
+                </div>
+              )}
+            </div>
+            
+            <div className="mb-3">
+              {renderPreferences(customer)}
+            </div>
+            
+            <button 
+              onClick={() => handleLeaveQueueClick(customer)}
+              className="text-red-500 text-sm flex items-center hover:text-red-700 transition-colors"
+            >
+              <X className="h-3 w-3 mr-1" />
+              Sair da fila
+            </button>
+          </div>
+        ))}
+      </div>
+      
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar saída da fila</DialogTitle>
+            <DialogDescription>
+              Para confirmar que é você, digite o número de telefone que você usou para entrar na fila.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Input
+              placeholder="DDD + Número (apenas números)"
+              value={confirmPhone}
+              onChange={(e) => setConfirmPhone(e.target.value.replace(/\D/g, ""))}
+            />
+            
+            {error && (
+              <div className="mt-2 flex items-center text-red-500 text-sm">
+                <AlertCircle className="h-4 w-4 mr-1" />
+                <span>{error}</span>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenDialog(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleConfirmLeaveQueue}
+            >
+              Confirmar Saída
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default WaitingList;
