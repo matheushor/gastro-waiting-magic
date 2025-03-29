@@ -76,7 +76,12 @@ const Admin = () => {
     try {
       const customer = queueState.customers.find(c => c.id === id);
       if (customer) {
-        setCalledHistory(prev => [{...customer, status: 'seated'}, ...prev].slice(0, 50));
+        // Ensure we properly type the status as one of the allowed values
+        const seatedCustomer: Customer = {
+          ...customer,
+          status: "seated" as const
+        };
+        setCalledHistory(prev => [seatedCustomer, ...prev].slice(0, 50));
       }
       await removeCustomer(id);
       toast.success("Cliente atendido com sucesso!");
