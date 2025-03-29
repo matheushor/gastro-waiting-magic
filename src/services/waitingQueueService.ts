@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { Customer, WaitingQueueState } from "@/types";
+import { Json } from "@/integrations/supabase/types";
 
 // Converte um Customer para o formato do banco de dados
 export const customerToDbFormat = (customer: Customer) => {
@@ -8,7 +9,7 @@ export const customerToDbFormat = (customer: Customer) => {
     name: customer.name,
     phone: customer.phone,
     party_size: customer.partySize,
-    preferences: customer.preferences,
+    preferences: customer.preferences as unknown as Json, // Cast para Json type do Supabase
     timestamp: customer.timestamp,
     status: customer.status,
   };
@@ -21,7 +22,7 @@ export const dbToCustomerFormat = (record: any): Customer => {
     name: record.name,
     phone: record.phone,
     partySize: record.party_size,
-    preferences: record.preferences,
+    preferences: record.preferences as unknown as Customer['preferences'],
     timestamp: record.timestamp,
     status: record.status as 'waiting' | 'called' | 'seated' | 'left',
   };
