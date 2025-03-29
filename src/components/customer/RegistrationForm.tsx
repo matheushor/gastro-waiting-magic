@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -6,7 +7,7 @@ import { toast } from "sonner";
 import { Customer, Preferences } from "@/types";
 import { getCurrentPosition, isWithinRadius, RESTAURANT_LOCATION } from "@/utils/geoUtils";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, MapPin } from "lucide-react";
+import { AlertCircle, MapPin, Baby, Dog, UserCog, Wheelchair, HeartPulse, Home, Wind } from "lucide-react";
 
 interface RegistrationFormProps {
   onRegister: (customer: Customer) => void;
@@ -23,17 +24,47 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
     infant: false,
     withDog: false,
     indoor: true,
+    outdoor: false,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const [bypassGeolocation, setBypassGeolocation] = useState(false);
 
+  // Effect to handle automatic preference selections
+  useEffect(() => {
+    // If "withDog" is selected, automatically select "outdoor" and deselect "indoor"
+    if (preferences.withDog) {
+      setPreferences(prev => ({
+        ...prev,
+        outdoor: true,
+        indoor: false
+      }));
+    }
+    
+    // Make indoor and outdoor mutually exclusive
+    if (preferences.indoor && preferences.outdoor) {
+      // If the user just selected indoor, deselect outdoor
+      setPreferences(prev => ({
+        ...prev,
+        outdoor: false
+      }));
+    }
+  }, [preferences.withDog, preferences.indoor, preferences.outdoor]);
+
   const handlePreferenceChange = (key: keyof Preferences) => {
-    setPreferences((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+    setPreferences(prev => {
+      const newPrefs = { ...prev, [key]: !prev[key] };
+      
+      // Handle mutual exclusivity between indoor and outdoor
+      if (key === 'indoor' && newPrefs.indoor) {
+        newPrefs.outdoor = false;
+      } else if (key === 'outdoor' && newPrefs.outdoor) {
+        newPrefs.indoor = false;
+      }
+      
+      return newPrefs;
+    });
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,6 +72,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
     if (value.length <= 11) {
       setPhone(value);
     }
+  };
+
+  const formatPhoneDisplay = (phone: string) => {
+    if (!phone) return "";
+    if (phone.length <= 2) return phone;
+    if (phone.length <= 6) return `(${phone.slice(0, 2)}) ${phone.slice(2)}`;
+    return `(${phone.slice(0, 2)}) ${phone.slice(2, 7)}-${phone.slice(7)}`;
   };
 
   const handlePartySizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,6 +125,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
       }
       
       if (isNearby || bypassGeolocation) {
+        // Determine if the customer should have priority status
+        const hasPriority = preferences.pregnant || preferences.elderly || 
+                           preferences.disabled || preferences.infant;
+                           
         const newCustomer: Customer = {
           id: Math.random().toString(36).substring(2, 9),
           name,
@@ -95,6 +137,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
           preferences,
           timestamp: Date.now(),
           status: "waiting",
+          priority: hasPriority,
         };
         
         onRegister(newCustomer);
@@ -110,6 +153,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
           infant: false,
           withDog: false,
           indoor: true,
+          outdoor: false,
         });
       } else {
         setError("Você precisa estar próximo ao restaurante para entrar na fila (50m)");
@@ -123,47 +167,64 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md max-w-md w-full mx-auto">
-      <div className="mb-6 text-center">
-        <h2 className="text-2xl font-bold text-gastro-blue mb-2">Entre na Fila</h2>
-        <p className="text-gastro-gray">4 Gastro Burger</p>
+    <div className="bg-white rounded-lg shadow-lg border border-blue-100 overflow-hidden">
+      <div className="bg-gradient-to-r from-gastro-blue to-blue-600 text-white p-6">
+        <h2 className="text-2xl font-bold mb-2 flex items-center justify-center gap-2">
+          <UserCog className="h-6 w-6" />
+          Entre na Fila
+        </h2>
+        <p className="text-blue-100 text-center">
+          Preencha seus dados para entrar na fila de espera
+        </p>
       </div>
 
       {error && (
-        <div className="bg-red-50 p-4 rounded-md mb-4 flex items-start gap-3">
+        <div className="bg-red-50 p-4 mx-6 mt-4 rounded-md flex items-start gap-3">
           <AlertCircle className="text-red-500 h-5 w-5 mt-0.5 flex-shrink-0" />
           <p className="text-red-700 text-sm">{error}</p>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="p-6 space-y-5">
         <div>
-          <Label htmlFor="name" className="gastro-label">Nome completo</Label>
+          <Label htmlFor="name" className="text-gastro-gray font-semibold flex items-center gap-1">
+            <UserCog className="h-4 w-4 text-gastro-blue" />
+            Nome completo
+          </Label>
           <Input
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="gastro-input"
+            className="mt-1 border-2 border-blue-100 focus:border-gastro-blue"
             placeholder="Digite seu nome completo"
             disabled={isLoading}
           />
         </div>
 
         <div>
-          <Label htmlFor="phone" className="gastro-label">Telefone</Label>
+          <Label htmlFor="phone" className="text-gastro-gray font-semibold flex items-center gap-1">
+            <HeartPulse className="h-4 w-4 text-gastro-blue" />
+            Telefone
+          </Label>
           <Input
             id="phone"
             value={phone}
             onChange={handlePhoneChange}
-            className="gastro-input"
+            className="mt-1 border-2 border-blue-100 focus:border-gastro-blue"
             placeholder="DDD + Número (apenas números)"
             disabled={isLoading}
           />
+          {phone && (
+            <p className="text-xs text-gastro-blue mt-1">
+              Formatado: {formatPhoneDisplay(phone)}
+            </p>
+          )}
         </div>
 
         <div>
-          <Label htmlFor="partySize" className="gastro-label">
-            Número de pessoas (máximo 10)
+          <Label htmlFor="partySize" className="text-gastro-gray font-semibold flex items-center gap-1">
+            <UserCog className="h-4 w-4 text-gastro-blue" />
+            Número de pessoas
           </Label>
           <Input
             id="partySize"
@@ -172,109 +233,151 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
             max="10"
             value={partySize}
             onChange={handlePartySizeChange}
-            className="gastro-input"
+            className="mt-1 border-2 border-blue-100 focus:border-gastro-blue"
             disabled={isLoading}
           />
           {partySize >= 8 && (
-            <p className="text-amber-600 text-xs mt-1">
+            <p className="text-amber-600 text-xs mt-1 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
               Para grupos grandes, o tempo de espera pode ser maior.
             </p>
           )}
         </div>
 
         <div>
-          <p className="gastro-label mb-2">Preferências</p>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="flex items-center space-x-2">
+          <p className="text-gastro-gray font-semibold mb-2">Preferências Prioritárias</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-blue-50 transition-colors">
               <Checkbox
                 id="pregnant"
                 checked={preferences.pregnant}
                 onCheckedChange={() => handlePreferenceChange("pregnant")}
                 disabled={isLoading}
+                className="border-gastro-blue data-[state=checked]:bg-gastro-orange"
               />
               <label
                 htmlFor="pregnant"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 cursor-pointer"
               >
+                <HeartPulse className="h-4 w-4 text-gastro-orange" />
                 Gestante
               </label>
             </div>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-blue-50 transition-colors">
               <Checkbox
                 id="elderly"
                 checked={preferences.elderly}
                 onCheckedChange={() => handlePreferenceChange("elderly")}
                 disabled={isLoading}
+                className="border-gastro-blue data-[state=checked]:bg-gastro-orange"
               />
               <label
                 htmlFor="elderly"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 cursor-pointer"
               >
+                <UserCog className="h-4 w-4 text-gastro-orange" />
                 Idoso
               </label>
             </div>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-blue-50 transition-colors">
               <Checkbox
                 id="disabled"
                 checked={preferences.disabled}
                 onCheckedChange={() => handlePreferenceChange("disabled")}
                 disabled={isLoading}
+                className="border-gastro-blue data-[state=checked]:bg-gastro-orange"
               />
               <label
                 htmlFor="disabled"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 cursor-pointer"
               >
+                <Wheelchair className="h-4 w-4 text-gastro-orange" />
                 PCD
               </label>
             </div>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-blue-50 transition-colors">
               <Checkbox
                 id="infant"
                 checked={preferences.infant}
                 onCheckedChange={() => handlePreferenceChange("infant")}
                 disabled={isLoading}
+                className="border-gastro-blue data-[state=checked]:bg-gastro-orange"
               />
               <label
                 htmlFor="infant"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 cursor-pointer"
               >
+                <Baby className="h-4 w-4 text-gastro-orange" />
                 Criança de colo
               </label>
             </div>
-            
-            <div className="flex items-center space-x-2">
+          </div>
+        </div>
+        
+        <div>
+          <p className="text-gastro-gray font-semibold mb-2">Outras Preferências</p>
+          <div className="grid grid-cols-1 gap-3">
+            <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-blue-50 transition-colors">
               <Checkbox
                 id="withDog"
                 checked={preferences.withDog}
                 onCheckedChange={() => handlePreferenceChange("withDog")}
                 disabled={isLoading}
+                className="border-gastro-blue data-[state=checked]:bg-gastro-blue"
               />
               <label
                 htmlFor="withDog"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 cursor-pointer"
               >
-                Com cachorro
+                <Dog className="h-4 w-4 text-gastro-blue" />
+                Com cachorro (seleciona automaticamente mesa externa)
               </label>
             </div>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-blue-50 transition-colors">
               <Checkbox
                 id="indoor"
                 checked={preferences.indoor}
                 onCheckedChange={() => handlePreferenceChange("indoor")}
-                disabled={isLoading}
+                disabled={isLoading || preferences.withDog}
+                className="border-gastro-blue data-[state=checked]:bg-gastro-blue"
               />
               <label
                 htmlFor="indoor"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed ${preferences.withDog ? 'opacity-50' : 'opacity-100'} flex items-center gap-1 cursor-pointer`}
               >
+                <Home className="h-4 w-4 text-gastro-blue" />
                 Mesa interna
               </label>
             </div>
+            
+            <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-blue-50 transition-colors">
+              <Checkbox
+                id="outdoor"
+                checked={preferences.outdoor}
+                onCheckedChange={() => handlePreferenceChange("outdoor")}
+                disabled={isLoading || preferences.withDog}
+                className="border-gastro-blue data-[state=checked]:bg-gastro-blue"
+              />
+              <label
+                htmlFor="outdoor"
+                className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed ${preferences.withDog ? 'opacity-50' : 'opacity-100'} flex items-center gap-1 cursor-pointer`}
+              >
+                <Wind className="h-4 w-4 text-gastro-blue" />
+                Mesa externa
+              </label>
+            </div>
           </div>
+          
+          {preferences.withDog && (
+            <p className="text-xs text-gastro-blue mt-2 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              Para clientes com cachorro, apenas mesas externas estão disponíveis.
+            </p>
+          )}
         </div>
 
         <div className="pt-4">
@@ -296,14 +399,18 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
             </label>
           </div>
           
-          <div className="flex items-center justify-center gap-2 text-sm text-gastro-gray mb-4">
+          <div className="flex items-center justify-center gap-2 text-sm text-gastro-gray mb-4 bg-blue-50 p-3 rounded-lg">
             <MapPin className="h-4 w-4 text-gastro-blue" />
-            <span>Verificação de proximidade: 50 metros</span>
+            <div className="text-center">
+              <p className="font-medium text-gastro-blue">4 Gastro Burger</p>
+              <p className="text-xs">Rua Doutor José Guimarães, 758, Ribeirão Preto 14020-560</p>
+              <p className="text-xs mt-1">Verificação de proximidade: 50 metros</p>
+            </div>
           </div>
 
           <Button 
             type="submit" 
-            className="w-full btn-accent" 
+            className="w-full bg-gastro-orange hover:bg-orange-600 text-white font-bold py-3" 
             disabled={isLoading}
           >
             {isLoading ? "Processando..." : "Entrar na Fila"}

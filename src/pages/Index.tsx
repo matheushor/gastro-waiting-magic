@@ -6,7 +6,7 @@ import WaitingList from "@/components/customer/WaitingList";
 import { Customer, WaitingQueueState } from "@/types";
 import NotificationAlert from "@/components/customer/NotificationAlert";
 import { toast } from "sonner";
-import { BellRing, ClipboardList, LogIn, Bell, MapPin } from "lucide-react";
+import { BellRing, ClipboardList, LogIn, Bell, MapPin, AlertCircle } from "lucide-react";
 import { subscribeToQueueChanges, addCustomer, removeCustomer } from "@/services/waitingQueueService";
 
 const Index = () => {
@@ -85,7 +85,7 @@ const Index = () => {
     if (!calledCustomer) return;
     
     try {
-      // Volta o cliente para a fila em vez de remover
+      // Remove o cliente quando o tempo expirar
       await removeCustomer(calledCustomer.id);
       
       toast.error("Tempo expirado. Você foi removido da fila.");
@@ -98,40 +98,42 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-8 px-4 relative">
       <div className="max-w-md mx-auto mb-8">
-        <h1 className="text-3xl font-bold text-center text-gastro-blue">
-          4 Gastro Burger
-        </h1>
-        <p className="text-center text-gastro-gray mt-2 flex items-center justify-center gap-1">
-          <MapPin className="h-4 w-4 text-gastro-orange" />
-          <span>Sistema de Fila de Espera</span>
-        </p>
-        <div className="text-center text-xs text-gastro-gray mt-1">
-          -21.205835175291195, -47.80665877324732 • Ribeirão Preto, SP
+        <div className="bg-gradient-to-r from-gastro-blue to-blue-600 text-white p-6 rounded-lg shadow-lg">
+          <h1 className="text-3xl font-bold text-center">
+            4 Gastro Burger
+          </h1>
+          <p className="text-center text-blue-100 mt-2 flex items-center justify-center gap-1">
+            <MapPin className="h-4 w-4 text-gastro-orange" />
+            <span>Sistema de Fila de Espera</span>
+          </p>
+          <div className="text-center text-xs text-blue-100 mt-1">
+            Rua Doutor José Guimarães, 758, Ribeirão Preto 14020-560
+          </div>
         </div>
       </div>
 
       <Tabs defaultValue="waitingList" className="max-w-md mx-auto">
-        <TabsList className="grid w-full grid-cols-2 mb-8 bg-blue-100 p-1">
-          <TabsTrigger value="waitingList" className="flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-gastro-blue">
+        <TabsList className="grid w-full grid-cols-2 mb-6 bg-blue-100 p-1 rounded-lg overflow-hidden">
+          <TabsTrigger value="waitingList" className="flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-gastro-blue data-[state=active]:shadow-sm rounded-md">
             <ClipboardList className="h-4 w-4" />
             <span>Fila de Espera</span>
           </TabsTrigger>
-          <TabsTrigger value="register" className="flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-gastro-blue">
+          <TabsTrigger value="register" className="flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-gastro-blue data-[state=active]:shadow-sm rounded-md">
             <LogIn className="h-4 w-4" />
             <span>Entrar na Fila</span>
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="waitingList">
+        <TabsContent value="waitingList" className="animate-scale-in">
           <WaitingList 
             customers={queueState.customers} 
             onLeaveQueue={handleLeaveQueue} 
           />
         </TabsContent>
         
-        <TabsContent value="register">
+        <TabsContent value="register" className="animate-scale-in">
           <RegistrationForm onRegister={handleCustomerRegistration} />
         </TabsContent>
       </Tabs>
@@ -139,9 +141,9 @@ const Index = () => {
       <div className="mt-8 text-center">
         <a 
           href="/admin" 
-          className="inline-flex items-center text-gastro-blue hover:text-gastro-orange transition-colors"
+          className="inline-flex items-center text-gastro-blue hover:text-gastro-orange transition-colors bg-white px-4 py-2 rounded-full shadow-sm border border-blue-100"
         >
-          <BellRing className="h-4 w-4 mr-1" />
+          <BellRing className="h-4 w-4 mr-2" />
           Acesso do Administrador
         </a>
       </div>
@@ -153,6 +155,12 @@ const Index = () => {
           onTimeExpired={handleTimeExpired}
         />
       )}
+      
+      <div className="fixed bottom-4 right-4 z-10">
+        <div className="bg-white p-3 rounded-full shadow-lg border border-blue-100 flex items-center justify-center">
+          <AlertCircle className="h-5 w-5 text-gastro-blue" />
+        </div>
+      </div>
     </div>
   );
 };

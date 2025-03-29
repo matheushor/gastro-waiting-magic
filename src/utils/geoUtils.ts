@@ -1,3 +1,4 @@
+
 // Check if the customer is within the specified radius of the restaurant
 export const isWithinRadius = (
   customerLat: number,
@@ -41,6 +42,15 @@ export const RESTAURANT_LOCATION = {
   radius: 50 // radius in meters
 };
 
+// Restaurant address
+export const RESTAURANT_ADDRESS = {
+  street: "Rua Doutor José Guimarães, 758",
+  city: "Ribeirão Preto",
+  zipCode: "14020-560",
+  state: "SP",
+  country: "Brasil"
+};
+
 // Format waiting time
 export const formatWaitingTime = (timestamp: number): string => {
   const now = Date.now();
@@ -55,4 +65,12 @@ export const formatWaitingTime = (timestamp: number): string => {
     const remainingMinutes = minutes % 60;
     return `${hours}h ${remainingMinutes}m`;
   }
+};
+
+// Format phone number for display
+export const formatPhoneDisplay = (phone: string): string => {
+  if (!phone) return "";
+  if (phone.length <= 2) return phone;
+  if (phone.length <= 6) return `(${phone.slice(0, 2)}) ${phone.slice(2)}`;
+  return `(${phone.slice(0, 2)}) ${phone.slice(2, 7)}-${phone.slice(7)}`;
 };

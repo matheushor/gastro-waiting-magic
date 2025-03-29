@@ -8,6 +8,7 @@ export interface Customer {
   timestamp: number; // Unix timestamp when customer joined the queue
   status: 'waiting' | 'called' | 'seated' | 'left';
   position?: number; // Position in the queue
+  priority?: boolean; // Indicates if the customer has priority (pregnant, elderly, disabled, infant)
 }
 
 export interface Preferences {
@@ -17,6 +18,7 @@ export interface Preferences {
   infant: boolean;
   withDog: boolean;
   indoor: boolean;
+  outdoor: boolean; // Added for external tables
 }
 
 export interface Admin {

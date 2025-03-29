@@ -12,6 +12,7 @@ export const customerToDbFormat = (customer: Customer) => {
     preferences: customer.preferences as unknown as Json, // Cast para Json type do Supabase
     timestamp: customer.timestamp,
     status: customer.status,
+    priority: customer.priority || false, // Add priority field
   };
 };
 
@@ -25,6 +26,7 @@ export const dbToCustomerFormat = (record: any): Customer => {
     preferences: record.preferences as unknown as Customer['preferences'],
     timestamp: record.timestamp,
     status: record.status as 'waiting' | 'called' | 'seated' | 'left',
+    priority: record.priority || false, // Add priority field
   };
 };
 
@@ -87,6 +89,23 @@ export const updateCustomerStatus = async (id: string, status: 'waiting' | 'call
   }
 
   return dbToCustomerFormat(data);
+};
+
+// Fetch priority customers only
+export const fetchPriorityCustomers = async (): Promise<Customer[]> => {
+  const { data, error } = await supabase
+    .from('waiting_customers')
+    .select('*')
+    .eq('priority', true)
+    .eq('status', 'waiting')
+    .order('timestamp', { ascending: true });
+
+  if (error) {
+    console.error("Erro ao buscar clientes prioritários:", error);
+    throw error;
+  }
+
+  return data.map(dbToCustomerFormat);
 };
 
 // Configura uma assinatura em tempo real para atualizações na fila
