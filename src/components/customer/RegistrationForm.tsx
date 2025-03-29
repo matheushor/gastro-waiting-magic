@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +27,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Bypass geolocation for testing
   const [bypassGeolocation, setBypassGeolocation] = useState(false);
 
   const handlePreferenceChange = (key: keyof Preferences) => {
@@ -62,7 +60,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
     setIsLoading(true);
     setError(null);
     
-    // Validate inputs
     if (!name.trim()) {
       setError("Por favor, informe seu nome");
       setIsLoading(false);
@@ -79,7 +76,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
       let isNearby = bypassGeolocation;
       
       if (!bypassGeolocation) {
-        // Check geolocation
         const position = await getCurrentPosition();
         isNearby = isWithinRadius(
           position.coords.latitude,
@@ -104,7 +100,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
         onRegister(newCustomer);
         toast.success("Cadastro realizado com sucesso!");
         
-        // Reset form
         setName("");
         setPhone("");
         setPartySize(1);

@@ -1,110 +1,97 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RegistrationForm from "@/components/customer/RegistrationForm";
 import WaitingList from "@/components/customer/WaitingList";
 import { Customer, WaitingQueueState } from "@/types";
-import { initialWaitingQueueState } from "@/utils/mockData";
 import NotificationAlert from "@/components/customer/NotificationAlert";
 import { toast } from "sonner";
 import { BellRing, ClipboardList, LogIn, Bell } from "lucide-react";
+import { subscribeToQueueChanges, addCustomer, updateCustomerStatus, removeCustomer } from "@/services/waitingQueueService";
 
 const Index = () => {
-  const [queueState, setQueueState] = useState<WaitingQueueState>(initialWaitingQueueState);
+  const [queueState, setQueueState] = useState<WaitingQueueState>({ customers: [], currentlyServing: null });
   const [calledCustomer, setCalledCustomer] = useState<Customer | null>(null);
   
-  // Simulate real-time updates
   useEffect(() => {
-    const intervalId = setInterval(() => {
-      // Randomly call a customer (for demo purposes)
-      if (Math.random() < 0.1 && queueState.customers.length > 0 && !calledCustomer) {
-        const waitingCustomers = queueState.customers.filter(c => c.status === "waiting");
-        if (waitingCustomers.length > 0) {
-          const randomIndex = Math.floor(Math.random() * waitingCustomers.length);
-          const customerToCall = waitingCustomers[randomIndex];
-          
-          // Update customer status to called - use explicit typing
-          setQueueState(prev => ({
-            ...prev,
-            customers: prev.customers.map(c => 
-              c.id === customerToCall.id ? { ...c, status: "called" as const } : c
-            ),
-            currentlyServing: { ...customerToCall, status: "called" as const }
-          }));
-          
-          // Set the called customer to show notification
-          setCalledCustomer({ ...customerToCall, status: "called" as const });
-          
-          // Show toast notification
-          toast(
-            <div className="flex items-center gap-2">
-              <Bell className="h-5 w-5 text-gastro-orange" />
-              <div>
-                <p className="font-bold">Cliente chamado!</p>
-                <p className="text-sm">Cliente {customerToCall.name} foi chamado.</p>
-              </div>
+    const unsubscribe = subscribeToQueueChanges((newState) => {
+      setQueueState(newState);
+      
+      const newCalled = newState.customers.find(c => 
+        c.status === 'called' && 
+        (!calledCustomer || c.id !== calledCustomer.id)
+      );
+      
+      if (newCalled && !calledCustomer) {
+        setCalledCustomer(newCalled);
+        
+        toast(
+          <div className="flex items-center gap-2">
+            <Bell className="h-5 w-5 text-gastro-orange" />
+            <div>
+              <p className="font-bold">Cliente chamado!</p>
+              <p className="text-sm">Cliente {newCalled.name} foi chamado.</p>
             </div>
-          );
-        }
+          </div>
+        );
       }
-    }, 15000); // Check every 15 seconds
+    });
     
-    return () => clearInterval(intervalId);
-  }, [queueState, calledCustomer]);
+    return () => unsubscribe();
+  }, [calledCustomer]);
 
-  const handleCustomerRegistration = (newCustomer: Customer) => {
-    setQueueState(prev => ({
-      ...prev,
-      customers: [...prev.customers, newCustomer],
-    }));
-  };
-
-  const handleLeaveQueue = (id: string) => {
-    setQueueState(prev => ({
-      ...prev,
-      customers: prev.customers.filter(c => c.id !== id),
-      currentlyServing: prev.currentlyServing?.id === id ? null : prev.currentlyServing,
-    }));
-    
-    if (calledCustomer?.id === id) {
-      setCalledCustomer(null);
+  const handleCustomerRegistration = async (newCustomer: Customer) => {
+    try {
+      await addCustomer(newCustomer);
+      toast.success("Cadastro realizado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao registrar cliente:", error);
+      toast.error("Erro ao registrar cliente. Tente novamente.");
     }
   };
 
-  const handleConfirmPresence = () => {
-    if (!calledCustomer) return;
-    
-    toast.success("Presença confirmada! Dirija-se ao balcão.");
-    
-    // Update customer status to seated
-    setQueueState(prev => ({
-      ...prev,
-      customers: prev.customers.map(c => 
-        c.id === calledCustomer.id ? { ...c, status: "seated" as const } : c
-      ),
-      currentlyServing: null,
-    }));
-    
-    // Clear the notification
-    setCalledCustomer(null);
+  const handleLeaveQueue = async (id: string) => {
+    try {
+      await removeCustomer(id);
+      
+      if (calledCustomer?.id === id) {
+        setCalledCustomer(null);
+      }
+      
+      toast.success("Você saiu da fila com sucesso!");
+    } catch (error) {
+      console.error("Erro ao sair da fila:", error);
+      toast.error("Erro ao sair da fila. Tente novamente.");
+    }
   };
 
-  const handleTimeExpired = () => {
+  const handleConfirmPresence = async () => {
     if (!calledCustomer) return;
     
-    toast.error("Tempo expirado. Você voltou para a fila.");
+    try {
+      await updateCustomerStatus(calledCustomer.id, 'seated');
+      
+      toast.success("Presença confirmada! Dirija-se ao balcão.");
+      
+      setCalledCustomer(null);
+    } catch (error) {
+      console.error("Erro ao confirmar presença:", error);
+      toast.error("Erro ao confirmar presença. Tente novamente.");
+    }
+  };
+
+  const handleTimeExpired = async () => {
+    if (!calledCustomer) return;
     
-    // Put the customer back in the queue
-    setQueueState(prev => ({
-      ...prev,
-      customers: prev.customers.map(c => 
-        c.id === calledCustomer.id ? { ...c, status: "waiting" as const, timestamp: Date.now() } : c
-      ),
-      currentlyServing: null,
-    }));
-    
-    // Clear the notification
-    setCalledCustomer(null);
+    try {
+      await updateCustomerStatus(calledCustomer.id, 'waiting');
+      
+      toast.error("Tempo expirado. Você voltou para a fila.");
+      
+      setCalledCustomer(null);
+    } catch (error) {
+      console.error("Erro ao retornar para a fila:", error);
+      toast.error("Erro ao processar seu retorno à fila. Tente novamente.");
+    }
   };
 
   return (

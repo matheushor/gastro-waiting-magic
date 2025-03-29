@@ -2,13 +2,22 @@
 import React, { useState, useEffect } from "react";
 import AdminLogin from "@/components/admin/AdminLogin";
 import AdminDashboard from "@/components/admin/AdminDashboard";
-import { WaitingQueueState, Customer } from "@/types";
-import { initialWaitingQueueState } from "@/utils/mockData";
+import { WaitingQueueState } from "@/types";
 import { toast } from "sonner";
+import { subscribeToQueueChanges, updateCustomerStatus, removeCustomer } from "@/services/waitingQueueService";
 
 const Admin = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [queueState, setQueueState] = useState<WaitingQueueState>(initialWaitingQueueState);
+  const [queueState, setQueueState] = useState<WaitingQueueState>({ customers: [], currentlyServing: null });
+
+  // Inscreve-se para atualizações em tempo real quando logado
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    
+    const unsubscribe = subscribeToQueueChanges(setQueueState);
+    
+    return () => unsubscribe();
+  }, [isLoggedIn]);
 
   const handleLogin = () => {
     setIsLoggedIn(true);
@@ -19,7 +28,7 @@ const Admin = () => {
     setIsLoggedIn(false);
   };
 
-  const handleCallNext = () => {
+  const handleCallNext = async () => {
     const waitingCustomers = queueState.customers.filter(c => c.status === "waiting");
     
     if (waitingCustomers.length > 0) {
@@ -27,74 +36,28 @@ const Admin = () => {
       const sortedCustomers = [...waitingCustomers].sort((a, b) => a.timestamp - b.timestamp);
       const nextCustomer = sortedCustomers[0];
       
-      // Update customer status - explicitly set the status to the correct literal type
-      setQueueState(prev => ({
-        ...prev,
-        customers: prev.customers.map(c => 
-          c.id === nextCustomer.id ? { ...c, status: "called" as const } : c
-        ),
-        currentlyServing: { ...nextCustomer, status: "called" as const }
-      }));
-      
-      toast.success(`${nextCustomer.name} foi chamado!`);
+      try {
+        // Atualiza o status do cliente para "called"
+        await updateCustomerStatus(nextCustomer.id, "called");
+        toast.success(`${nextCustomer.name} foi chamado!`);
+      } catch (error) {
+        console.error("Erro ao chamar próximo cliente:", error);
+        toast.error("Erro ao chamar próximo cliente. Tente novamente.");
+      }
     } else {
       toast.error("Não há clientes na fila de espera.");
     }
   };
 
-  const handleRemoveCustomer = (id: string) => {
-    setQueueState(prev => ({
-      ...prev,
-      customers: prev.customers.filter(c => c.id !== id),
-      currentlyServing: prev.currentlyServing?.id === id ? null : prev.currentlyServing
-    }));
+  const handleRemoveCustomer = async (id: string) => {
+    try {
+      await removeCustomer(id);
+      toast.success("Cliente removido com sucesso!");
+    } catch (error) {
+      console.error("Erro ao remover cliente:", error);
+      toast.error("Erro ao remover cliente. Tente novamente.");
+    }
   };
-
-  // Simulate real-time updates
-  useEffect(() => {
-    if (!isLoggedIn) return;
-    
-    const intervalId = setInterval(() => {
-      // Randomly add a new customer (for demo purposes)
-      if (Math.random() < 0.2) {
-        const names = ["Carlos Silva", "Ana Oliveira", "Pedro Santos", "Juliana Lima", "Marcos Souza"];
-        const randomName = names[Math.floor(Math.random() * names.length)];
-        const randomPhone = "119" + Math.floor(Math.random() * 10000000).toString().padStart(8, '0');
-        const randomPartySize = Math.floor(Math.random() * 6) + 1;
-        
-        const newCustomer: Customer = {
-          id: Math.random().toString(36).substring(2, 9),
-          name: randomName,
-          phone: randomPhone,
-          partySize: randomPartySize,
-          preferences: {
-            pregnant: Math.random() < 0.1,
-            elderly: Math.random() < 0.2,
-            disabled: Math.random() < 0.1,
-            infant: Math.random() < 0.2,
-            withDog: Math.random() < 0.1,
-            indoor: Math.random() < 0.7,
-          },
-          timestamp: Date.now(),
-          status: "waiting" // Using the proper literal type
-        };
-        
-        setQueueState(prev => ({
-          ...prev,
-          customers: [...prev.customers, newCustomer],
-        }));
-        
-        toast(
-          <div>
-            <p className="font-bold">Novo cliente!</p>
-            <p className="text-sm">{randomName} entrou na fila</p>
-          </div>
-        );
-      }
-    }, 30000); // Check every 30 seconds
-    
-    return () => clearInterval(intervalId);
-  }, [isLoggedIn]);
 
   return (
     <div className="min-h-screen bg-gray-50">
