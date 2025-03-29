@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import AdminLogin from "@/components/admin/AdminLogin";
 import AdminDashboard from "@/components/admin/AdminDashboard";
-import { WaitingQueueState } from "@/types";
+import { WaitingQueueState, Customer } from "@/types";
 import { initialWaitingQueueState } from "@/utils/mockData";
 import { toast } from "sonner";
 
@@ -27,13 +27,13 @@ const Admin = () => {
       const sortedCustomers = [...waitingCustomers].sort((a, b) => a.timestamp - b.timestamp);
       const nextCustomer = sortedCustomers[0];
       
-      // Update customer status
+      // Update customer status - explicitly set the status to the correct literal type
       setQueueState(prev => ({
         ...prev,
         customers: prev.customers.map(c => 
-          c.id === nextCustomer.id ? { ...c, status: "called" } : c
+          c.id === nextCustomer.id ? { ...c, status: "called" as const } : c
         ),
-        currentlyServing: { ...nextCustomer, status: "called" }
+        currentlyServing: { ...nextCustomer, status: "called" as const }
       }));
       
       toast.success(`${nextCustomer.name} foi chamado!`);
@@ -62,7 +62,7 @@ const Admin = () => {
         const randomPhone = "119" + Math.floor(Math.random() * 10000000).toString().padStart(8, '0');
         const randomPartySize = Math.floor(Math.random() * 6) + 1;
         
-        const newCustomer = {
+        const newCustomer: Customer = {
           id: Math.random().toString(36).substring(2, 9),
           name: randomName,
           phone: randomPhone,
@@ -76,7 +76,7 @@ const Admin = () => {
             indoor: Math.random() < 0.7,
           },
           timestamp: Date.now(),
-          status: "waiting",
+          status: "waiting" // Using the proper literal type
         };
         
         setQueueState(prev => ({

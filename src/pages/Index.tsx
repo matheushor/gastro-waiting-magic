@@ -23,17 +23,17 @@ const Index = () => {
           const randomIndex = Math.floor(Math.random() * waitingCustomers.length);
           const customerToCall = waitingCustomers[randomIndex];
           
-          // Update customer status to called
+          // Update customer status to called - use explicit typing
           setQueueState(prev => ({
             ...prev,
             customers: prev.customers.map(c => 
-              c.id === customerToCall.id ? { ...c, status: "called" } : c
+              c.id === customerToCall.id ? { ...c, status: "called" as const } : c
             ),
-            currentlyServing: { ...customerToCall, status: "called" }
+            currentlyServing: { ...customerToCall, status: "called" as const }
           }));
           
           // Set the called customer to show notification
-          setCalledCustomer({ ...customerToCall, status: "called" });
+          setCalledCustomer({ ...customerToCall, status: "called" as const });
           
           // Show toast notification
           toast(
@@ -80,7 +80,7 @@ const Index = () => {
     setQueueState(prev => ({
       ...prev,
       customers: prev.customers.map(c => 
-        c.id === calledCustomer.id ? { ...c, status: "seated" } : c
+        c.id === calledCustomer.id ? { ...c, status: "seated" as const } : c
       ),
       currentlyServing: null,
     }));
@@ -98,7 +98,7 @@ const Index = () => {
     setQueueState(prev => ({
       ...prev,
       customers: prev.customers.map(c => 
-        c.id === calledCustomer.id ? { ...c, status: "waiting", timestamp: Date.now() } : c
+        c.id === calledCustomer.id ? { ...c, status: "waiting" as const, timestamp: Date.now() } : c
       ),
       currentlyServing: null,
     }));
