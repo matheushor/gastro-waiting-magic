@@ -108,7 +108,7 @@ const Index = () => {
           <span>Sistema de Fila de Espera</span>
         </p>
         <div className="text-center text-xs text-gastro-gray mt-1">
-          -21.201853, -47.806961 • Ribeirão Preto, SP
+          -21.205835175291195, -47.80665877324732 • Ribeirão Preto, SP
         </div>
       </div>
 

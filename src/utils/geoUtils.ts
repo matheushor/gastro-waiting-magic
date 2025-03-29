@@ -1,4 +1,3 @@
-
 // Check if the customer is within the specified radius of the restaurant
 export const isWithinRadius = (
   customerLat: number,
@@ -35,10 +34,10 @@ export const getCurrentPosition = (): Promise<GeolocationPosition> => {
   });
 };
 
-// Restaurant location (should be replaced with actual coordinates)
+// Restaurant location (updated with correct coordinates)
 export const RESTAURANT_LOCATION = {
-  lat: -23.5505, // Example coordinates (São Paulo)
-  lng: -46.6333,
+  lat: -21.205835175291195, // Updated coordinates
+  lng: -47.80665877324732,   // Updated coordinates
   radius: 50 // radius in meters
 };
 
