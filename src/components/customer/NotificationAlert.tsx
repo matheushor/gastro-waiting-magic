@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Customer } from "@/types";
-import { CheckCircle, Clock } from "lucide-react";
+import { CheckCircle, Clock, MapPin } from "lucide-react";
 
 interface NotificationAlertProps {
   customer: Customer;
@@ -15,7 +15,7 @@ const NotificationAlert: React.FC<NotificationAlertProps> = ({
   onConfirm,
   onTimeExpired,
 }) => {
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(300); // 5 minutos em segundos
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -39,9 +39,12 @@ const NotificationAlert: React.FC<NotificationAlertProps> = ({
   const dashOffset = circumference * (1 - timeLeft / 300);
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+    <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50">
       <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4 animate-scale-in">
         <div className="text-center mb-6">
+          <div className="w-20 h-20 bg-gastro-orange/10 rounded-full flex items-center justify-center mx-auto mb-3">
+            <CheckCircle className="h-10 w-10 text-gastro-orange" />
+          </div>
           <h2 className="text-2xl font-bold text-gastro-blue mb-2">É a sua vez!</h2>
           <p className="text-gastro-gray">
             Olá, {customer.name}! Sua mesa para {customer.partySize}{" "}
@@ -89,19 +92,24 @@ const NotificationAlert: React.FC<NotificationAlertProps> = ({
         </div>
 
         <div className="text-center mb-6">
+          <div className="bg-blue-50 p-3 rounded-lg mb-4 flex items-start">
+            <MapPin className="h-5 w-5 text-gastro-blue mt-0.5 mr-2 flex-shrink-0" />
+            <p className="text-sm text-gastro-gray text-left">
+              Dirija-se ao restaurante na <strong className="text-gastro-blue">Av. Independência, 3848 - Jardim Sumaré, Ribeirão Preto</strong> e confirme sua presença no balcão.
+            </p>
+          </div>
           <p className="text-sm text-gastro-gray">
-            Por favor, dirija-se ao balcão nos próximos{" "}
-            <span className="font-bold">{minutes} minutos e {seconds.toString().padStart(2, "0")} segundos</span> para ser
-            acomodado. Após esse período, você voltará para a fila.
+            Por favor, confirme sua presença nos próximos{" "}
+            <span className="font-bold">{minutes} minutos e {seconds.toString().padStart(2, "0")} segundos</span>. Após esse período, você será removido da fila.
           </p>
         </div>
 
         <Button
           onClick={onConfirm}
-          className="w-full btn-accent flex items-center justify-center gap-2"
+          className="w-full bg-gastro-orange hover:bg-orange-600 text-white flex items-center justify-center gap-2 py-6"
         >
           <CheckCircle className="h-5 w-5" />
-          <span>Confirmar Presença</span>
+          <span className="font-semibold">Confirmar Presença</span>
         </Button>
       </div>
     </div>

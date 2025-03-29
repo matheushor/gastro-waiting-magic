@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { Customer } from "@/types";
-import { Clock, AlertCircle, X } from "lucide-react";
+import { Clock, AlertCircle, X, User, Users } from "lucide-react";
 import { formatWaitingTime } from "@/utils/geoUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -58,7 +58,6 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
     
     onLeaveQueue(selectedCustomer.id);
     setOpenDialog(false);
-    toast.success("Você saiu da fila com sucesso!");
   };
 
   const renderPreferences = (customer: Customer) => {
@@ -79,6 +78,25 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
       </span>
     ));
   };
+  
+  // Calculate average waiting time
+  const calculateAverageWaitTime = () => {
+    const waitingCustomers = customers.filter(c => c.status === 'waiting');
+    if (waitingCustomers.length <= 1) return null;
+    
+    const timestamps = waitingCustomers.map(c => c.timestamp).sort((a, b) => a - b);
+    let totalDiff = 0;
+    
+    for (let i = 1; i < timestamps.length; i++) {
+      totalDiff += timestamps[i] - timestamps[i-1];
+    }
+    
+    const avgDiffMs = totalDiff / (timestamps.length - 1);
+    return Math.ceil(avgDiffMs / 60000); // Convert to minutes and round up
+  };
+  
+  const avgWaitTime = calculateAverageWaitTime();
+  const waitingCount = customers.filter(c => c.status === 'waiting').length;
 
   if (sortedCustomers.length === 0) {
     return (
@@ -94,7 +112,25 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md max-w-md w-full mx-auto">
-      <h2 className="text-xl font-bold text-gastro-blue mb-4">Fila de Espera</h2>
+      <h2 className="text-xl font-bold text-gastro-blue mb-4 flex items-center">
+        <Users className="h-5 w-5 mr-2" />
+        Fila de Espera
+      </h2>
+      
+      <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg mb-4">
+        <div className="flex items-center">
+          <User className="h-4 w-4 text-gastro-blue mr-2" />
+          <span className="text-sm font-medium text-gastro-blue">{waitingCount} {waitingCount === 1 ? 'pessoa' : 'pessoas'} na fila</span>
+        </div>
+        {avgWaitTime && (
+          <div className="flex items-center">
+            <Clock className="h-4 w-4 text-gastro-orange mr-1" />
+            <span className="text-sm font-medium text-gastro-orange">
+              ~{avgWaitTime} min por pessoa
+            </span>
+          </div>
+        )}
+      </div>
       
       <div className="space-y-3">
         {sortedCustomers.map((customer) => (
@@ -103,7 +139,7 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
             className={`border rounded-lg p-4 relative ${
               customer.status === "called" 
                 ? "border-gastro-orange bg-orange-50" 
-                : "border-gastro-lightGray"
+                : "border-gastro-lightGray hover:border-gastro-blue transition-colors"
             }`}
           >
             {customer.status === "called" && (
@@ -151,6 +187,16 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
           </div>
         ))}
       </div>
+      
+      {waitingCount > 0 && (
+        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+          <p className="text-sm text-gastro-gray">
+            Tempo estimado de espera: <strong className="text-gastro-blue">
+              {avgWaitTime ? `~${avgWaitTime * waitingCount} minutos` : 'Calculando...'}
+            </strong>
+          </p>
+        </div>
+      )}
       
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
         <DialogContent>
