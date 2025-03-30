@@ -30,8 +30,11 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Define any missing variables that might be expected by Vite
+  // Define environment variables properly
   define: {
-    __WS_TOKEN__: JSON.stringify("dummy-token"),
+    __WS_TOKEN__: JSON.stringify(process.env.WS_TOKEN || "dummy-token"),
+    // Add any other needed environment variables here
   },
+  // Ensure proper env variable handling
+  envPrefix: "VITE_",
 }));
