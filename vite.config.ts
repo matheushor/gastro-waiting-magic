@@ -30,8 +30,4 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Completely remove process.env references and use direct string values
-  define: {
-    __WS_TOKEN__: '"dummy-token"',
-  },
 }));
