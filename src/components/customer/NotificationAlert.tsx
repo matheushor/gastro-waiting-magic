@@ -95,7 +95,7 @@ const NotificationAlert: React.FC<NotificationAlertProps> = ({
           <div className="bg-blue-50 p-3 rounded-lg mb-4 flex items-start">
             <MapPin className="h-5 w-5 text-gastro-blue mt-0.5 mr-2 flex-shrink-0" />
             <p className="text-sm text-gastro-gray text-left">
-              Dirija-se ao restaurante na <strong className="text-gastro-blue">Av. Independência, 3848 - Jardim Sumaré, Ribeirão Preto</strong> e confirme sua presença no balcão.
+              Dirija-se ao restaurante na <strong className="text-gastro-blue">R. Dr. José Guimarães, 758 - Jardim Irajá, Ribeirão Preto - SP, 14020-560</strong> e confirme sua presença no balcão.
             </p>
           </div>
           <p className="text-sm text-gastro-gray">

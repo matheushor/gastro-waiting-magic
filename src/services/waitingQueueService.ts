@@ -9,7 +9,7 @@ export const customerToDbFormat = (customer: Customer) => {
     name: customer.name,
     phone: customer.phone,
     party_size: customer.partySize,
-    preferences: customer.preferences as unknown as Json, // Cast para Json type do Supabase
+    preferences: customer.preferences as unknown as Json, // Fixed type casting
     timestamp: customer.timestamp,
     status: customer.status,
     priority: customer.priority || false, // Add priority field
@@ -23,7 +23,7 @@ export const dbToCustomerFormat = (record: any): Customer => {
     name: record.name,
     phone: record.phone,
     partySize: record.party_size,
-    preferences: record.preferences as unknown as Customer['preferences'],
+    preferences: record.preferences as any, // Use any to avoid deep type issues
     timestamp: record.timestamp,
     status: record.status as 'waiting' | 'called' | 'seated' | 'left',
     priority: record.priority || false, // Add priority field
@@ -75,7 +75,10 @@ export const removeCustomer = async (id: string): Promise<void> => {
 };
 
 // Atualiza o status de um cliente
-export const updateCustomerStatus = async (id: string, status: 'waiting' | 'called' | 'seated' | 'left'): Promise<Customer> => {
+export const updateCustomerStatus = async (
+  id: string, 
+  status: 'waiting' | 'called' | 'seated' | 'left'
+): Promise<Customer> => {
   const { data, error } = await supabase
     .from('waiting_customers')
     .update({ status })
@@ -118,23 +121,28 @@ export const subscribeToQueueChanges = (callback: (state: WaitingQueueState) => 
     console.error("Erro na busca inicial:", error);
   });
 
-  // Configura o canal de tempo real
+  // Resolvendo o erro de tipo profundo usando tipagem explícita
+  type PostgresChangesFilter = {
+    event: '*' | 'INSERT' | 'UPDATE' | 'DELETE';
+    schema: string;
+    table: string;
+  };
+
   const channel = supabase
     .channel('public:waiting_customers')
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'waiting_customers'
-    }, async () => {
-      // A cada mudança, busca todos os dados novamente
-      try {
-        const customers = await fetchAllCustomers();
-        const currentlyServing = customers.find(c => c.status === 'called') || null;
-        callback({ customers, currentlyServing });
-      } catch (error) {
-        console.error("Erro ao atualizar após mudança:", error);
+    .on('postgres_changes', 
+      { event: '*', schema: 'public', table: 'waiting_customers' } as PostgresChangesFilter, 
+      async () => {
+        // A cada mudança, busca todos os dados novamente
+        try {
+          const customers = await fetchAllCustomers();
+          const currentlyServing = customers.find(c => c.status === 'called') || null;
+          callback({ customers, currentlyServing });
+        } catch (error) {
+          console.error("Erro ao atualizar após mudança:", error);
+        }
       }
-    })
+    )
     .subscribe();
 
   // Retorna uma função para cancelar a assinatura

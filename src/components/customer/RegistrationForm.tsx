@@ -3,11 +3,12 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Customer, Preferences } from "@/types";
 import { getCurrentPosition, isWithinRadius, RESTAURANT_LOCATION } from "@/utils/geoUtils";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, MapPin, Baby, Dog, UserCog, Wheelchair, HeartPulse, Home, Wind } from "lucide-react";
+import { AlertCircle, MapPin, User, Users, Heart, Shield, Home, Wind } from "lucide-react";
 
 interface RegistrationFormProps {
   onRegister: (customer: Customer) => void;
@@ -31,9 +32,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
   
   const [bypassGeolocation, setBypassGeolocation] = useState(false);
 
-  // Effect to handle automatic preference selections
+  // Atualiza preferências quando "com cachorro" é selecionado
   useEffect(() => {
-    // If "withDog" is selected, automatically select "outdoor" and deselect "indoor"
     if (preferences.withDog) {
       setPreferences(prev => ({
         ...prev,
@@ -41,25 +41,28 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
         indoor: false
       }));
     }
-    
-    // Make indoor and outdoor mutually exclusive
+  }, [preferences.withDog]);
+
+  // Garante que apenas um tipo de mesa está selecionado por vez
+  useEffect(() => {
     if (preferences.indoor && preferences.outdoor) {
-      // If the user just selected indoor, deselect outdoor
       setPreferences(prev => ({
         ...prev,
         outdoor: false
       }));
     }
-  }, [preferences.withDog, preferences.indoor, preferences.outdoor]);
+  }, [preferences.indoor]);
 
   const handlePreferenceChange = (key: keyof Preferences) => {
     setPreferences(prev => {
       const newPrefs = { ...prev, [key]: !prev[key] };
       
-      // Handle mutual exclusivity between indoor and outdoor
+      // Se selecionar mesa interna, desmarca mesa externa
       if (key === 'indoor' && newPrefs.indoor) {
         newPrefs.outdoor = false;
-      } else if (key === 'outdoor' && newPrefs.outdoor) {
+      }
+      // Se selecionar mesa externa, desmarca mesa interna
+      else if (key === 'outdoor' && newPrefs.outdoor) {
         newPrefs.indoor = false;
       }
       
@@ -81,11 +84,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
     return `(${phone.slice(0, 2)}) ${phone.slice(2, 7)}-${phone.slice(7)}`;
   };
 
-  const handlePartySizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value);
-    if (value > 0 && value <= 10) {
-      setPartySize(value);
-    }
+  const handlePartySizeChange = (value: string) => {
+    setPartySize(parseInt(value));
   };
 
   const toggleBypassGeolocation = () => {
@@ -125,7 +125,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
       }
       
       if (isNearby || bypassGeolocation) {
-        // Determine if the customer should have priority status
         const hasPriority = preferences.pregnant || preferences.elderly || 
                            preferences.disabled || preferences.infant;
                            
@@ -170,7 +169,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
     <div className="bg-white rounded-lg shadow-lg border border-blue-100 overflow-hidden">
       <div className="bg-gradient-to-r from-gastro-blue to-blue-600 text-white p-6">
         <h2 className="text-2xl font-bold mb-2 flex items-center justify-center gap-2">
-          <UserCog className="h-6 w-6" />
+          <User className="h-6 w-6" />
           Entre na Fila
         </h2>
         <p className="text-blue-100 text-center">
@@ -188,7 +187,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
       <form onSubmit={handleSubmit} className="p-6 space-y-5">
         <div>
           <Label htmlFor="name" className="text-gastro-gray font-semibold flex items-center gap-1">
-            <UserCog className="h-4 w-4 text-gastro-blue" />
+            <User className="h-4 w-4 text-gastro-blue" />
             Nome completo
           </Label>
           <Input
@@ -203,7 +202,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
 
         <div>
           <Label htmlFor="phone" className="text-gastro-gray font-semibold flex items-center gap-1">
-            <HeartPulse className="h-4 w-4 text-gastro-blue" />
+            <Heart className="h-4 w-4 text-gastro-blue" />
             Telefone
           </Label>
           <Input
@@ -223,19 +222,21 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
 
         <div>
           <Label htmlFor="partySize" className="text-gastro-gray font-semibold flex items-center gap-1">
-            <UserCog className="h-4 w-4 text-gastro-blue" />
+            <User className="h-4 w-4 text-gastro-blue" />
             Número de pessoas
           </Label>
-          <Input
-            id="partySize"
-            type="number"
-            min="1"
-            max="10"
-            value={partySize}
-            onChange={handlePartySizeChange}
-            className="mt-1 border-2 border-blue-100 focus:border-gastro-blue"
-            disabled={isLoading}
-          />
+          <Select onValueChange={handlePartySizeChange} defaultValue="1">
+            <SelectTrigger className="w-full mt-1 border-2 border-blue-100 focus:border-gastro-blue">
+              <SelectValue placeholder="Selecione o número de pessoas" />
+            </SelectTrigger>
+            <SelectContent>
+              {[...Array(10)].map((_, i) => (
+                <SelectItem key={i} value={(i + 1).toString()}>
+                  {i + 1} {i + 1 > 1 ? 'pessoas' : 'pessoa'}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {partySize >= 8 && (
             <p className="text-amber-600 text-xs mt-1 flex items-center gap-1">
               <AlertCircle className="h-3 w-3" />
@@ -259,7 +260,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
                 htmlFor="pregnant"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 cursor-pointer"
               >
-                <HeartPulse className="h-4 w-4 text-gastro-orange" />
+                <Heart className="h-4 w-4 text-gastro-orange" />
                 Gestante
               </label>
             </div>
@@ -276,7 +277,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
                 htmlFor="elderly"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 cursor-pointer"
               >
-                <UserCog className="h-4 w-4 text-gastro-orange" />
+                <User className="h-4 w-4 text-gastro-orange" />
                 Idoso
               </label>
             </div>
@@ -293,7 +294,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
                 htmlFor="disabled"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 cursor-pointer"
               >
-                <Wheelchair className="h-4 w-4 text-gastro-orange" />
+                <Heart className="h-4 w-4 text-gastro-orange" />
                 PCD
               </label>
             </div>
@@ -310,7 +311,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
                 htmlFor="infant"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 cursor-pointer"
               >
-                <Baby className="h-4 w-4 text-gastro-orange" />
+                <User className="h-4 w-4 text-gastro-orange" />
                 Criança de colo
               </label>
             </div>
@@ -332,7 +333,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
                 htmlFor="withDog"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 cursor-pointer"
               >
-                <Dog className="h-4 w-4 text-gastro-blue" />
+                <Shield className="h-4 w-4 text-gastro-blue" />
                 Com cachorro (seleciona automaticamente mesa externa)
               </label>
             </div>
@@ -402,8 +403,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
           <div className="flex items-center justify-center gap-2 text-sm text-gastro-gray mb-4 bg-blue-50 p-3 rounded-lg">
             <MapPin className="h-4 w-4 text-gastro-blue" />
             <div className="text-center">
-              <p className="font-medium text-gastro-blue">4 Gastro Burger</p>
-              <p className="text-xs">Rua Doutor José Guimarães, 758, Ribeirão Preto 14020-560</p>
+              <p className="font-medium text-gastro-blue">Quatro Gastro Burger</p>
+              <p className="text-xs">R. Dr. José Guimarães, 758 - Jardim Irajá, Ribeirão Preto - SP, 14020-560</p>
               <p className="text-xs mt-1">Verificação de proximidade: 50 metros</p>
             </div>
           </div>

@@ -3,10 +3,11 @@ import React, { useState } from "react";
 import { Customer } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BellRing, Users, Clock, LogOut, UserCheck, X, History, Star, User, Coffee } from "lucide-react";
+import { BellRing, Users, Clock, LogOut, UserCheck, X, History, Star, User, Coffee, UserPlus } from "lucide-react";
 import { formatWaitingTime } from "@/utils/geoUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import AdminRegistrationForm from "./AdminRegistrationForm";
 
 interface AdminDashboardProps {
   customers: Customer[];
@@ -16,8 +17,11 @@ interface AdminDashboardProps {
   onLogout: () => void;
   currentlyServing: Customer | null;
   calledHistory: Customer[];
-  activeTab: 'waiting' | 'called' | 'history' | 'priority';
-  onChangeTab: (tab: 'waiting' | 'called' | 'history' | 'priority') => void;
+  activeTab: 'waiting' | 'called' | 'history' | 'priority' | 'register';
+  onChangeTab: (tab: 'waiting' | 'called' | 'history' | 'priority' | 'register') => void;
+  queueCounts: {time: string, count: number}[];
+  avgWaitTime: number | null;
+  onRegisterCustomer: (customer: Customer) => void;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -30,6 +34,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   calledHistory,
   activeTab,
   onChangeTab,
+  queueCounts,
+  avgWaitTime,
+  onRegisterCustomer,
 }) => {
   const [confirmDialog, setConfirmDialog] = useState(false);
   const [customerToRemove, setCustomerToRemove] = useState<Customer | null>(null);
@@ -90,7 +97,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gastro-blue">Painel Administrativo</h1>
-          <p className="text-gastro-gray">4 Gastro Burger</p>
+          <p className="text-gastro-gray">Quatro Gastro Burger</p>
         </div>
         <Button variant="outline" onClick={onLogout} className="flex items-center gap-2">
           <LogOut className="h-4 w-4" />
@@ -108,12 +115,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
         
         <div className="bg-white p-6 rounded-lg shadow-md flex items-center">
-          <Star className="h-10 w-10 mr-4 text-gastro-orange" />
+          <Clock className="h-10 w-10 mr-4 text-gastro-orange" />
           <div>
             <h2 className="text-3xl font-bold text-gastro-blue">
-              {priorityCustomers.length}
+              {avgWaitTime ? `${avgWaitTime}m` : "-"}
             </h2>
-            <p className="text-sm text-gastro-gray">Prioritários</p>
+            <p className="text-sm text-gastro-gray">Tempo médio por cliente</p>
           </div>
         </div>
         
@@ -174,7 +181,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       <Tabs defaultValue="waiting" value={activeTab} onValueChange={(val) => onChangeTab(val as any)}>
-        <TabsList className="grid grid-cols-4 mb-4">
+        <TabsList className="grid grid-cols-5 mb-4">
           <TabsTrigger value="waiting" className="flex items-center gap-1">
             <Users className="h-4 w-4" />
             <span>Aguardando</span>
@@ -190,6 +197,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <TabsTrigger value="history" className="flex items-center gap-1">
             <History className="h-4 w-4" />
             <span>Histórico</span>
+          </TabsTrigger>
+          <TabsTrigger value="register" className="flex items-center gap-1">
+            <UserPlus className="h-4 w-4" />
+            <span>Cadastrar</span>
           </TabsTrigger>
         </TabsList>
         
@@ -257,11 +268,71 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </TabsContent>
         
         <TabsContent value="history">
-          <h2 className="text-xl font-bold text-gastro-blue mb-3">Histórico de Atendimentos</h2>
+          <h2 className="text-xl font-bold text-gastro-blue mb-3">Histórico do Dia</h2>
+          
+          <div className="bg-white p-4 rounded-lg shadow-md mb-4">
+            <h3 className="font-semibold text-gastro-blue mb-3">Estatísticas da Fila</h3>
+            <div className="relative h-40">
+              {queueCounts.length > 0 ? (
+                <svg className="w-full h-full" viewBox={`0 0 ${queueCounts.length * 15} 100`} preserveAspectRatio="none">
+                  <line 
+                    x1="0" 
+                    y1="90" 
+                    x2={queueCounts.length * 15} 
+                    y2="90" 
+                    stroke="#ddd" 
+                    strokeWidth="1" 
+                  />
+                  {[...Array(5)].map((_, i) => (
+                    <line 
+                      key={i}
+                      x1="0" 
+                      y1={90 - (i+1) * 15} 
+                      x2={queueCounts.length * 15} 
+                      y2={90 - (i+1) * 15} 
+                      stroke="#eee" 
+                      strokeWidth="1" 
+                    />
+                  ))}
+                  <polyline 
+                    points={queueCounts.map((point, index) => 
+                      `${index * 15}, ${Math.max(10, 90 - point.count * 10)}`
+                    ).join(' ')} 
+                    fill="none" 
+                    stroke="#3B82F6" 
+                    strokeWidth="2" 
+                  />
+                  {queueCounts.map((point, index) => (
+                    <circle 
+                      key={index}
+                      cx={index * 15} 
+                      cy={Math.max(10, 90 - point.count * 10)} 
+                      r="3" 
+                      fill="#3B82F6" 
+                    />
+                  ))}
+                </svg>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gastro-gray">
+                  Sem dados disponíveis
+                </div>
+              )}
+            </div>
+            <div className="flex justify-between mt-2 text-xs text-gastro-gray">
+              {queueCounts.length > 0 && (
+                <>
+                  <div>{queueCounts[0].time}</div>
+                  {queueCounts.length > 1 && (
+                    <div>{queueCounts[queueCounts.length - 1].time}</div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
           
           {calledHistory.length === 0 ? (
             <div className="bg-white p-6 rounded-lg shadow-md text-center">
-              <p className="text-gastro-gray">Nenhum histórico de atendimento disponível.</p>
+              <p className="text-gastro-gray">Nenhum histórico de atendimento disponível hoje.</p>
             </div>
           ) : (
             <div className="grid gap-4">
@@ -283,6 +354,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               ))}
             </div>
           )}
+        </TabsContent>
+        
+        <TabsContent value="register">
+          <h2 className="text-xl font-bold text-gastro-blue mb-3">Cadastrar Cliente</h2>
+          <AdminRegistrationForm onRegister={onRegisterCustomer} />
         </TabsContent>
       </Tabs>
 
