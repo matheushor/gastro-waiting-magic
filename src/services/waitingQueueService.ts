@@ -1,3 +1,4 @@
+
 import { WaitingQueueState, Customer } from "../types";
 import { initialWaitingQueueState } from "../utils/mockData";
 import { supabase } from "../integrations/supabase/client";
@@ -158,43 +159,59 @@ export const subscribeToQueueChanges = (
   subscribers.push(callback);
   callback({ ...currentQueue });
   
+  // Use a fallback approach that doesn't depend on WebSockets
+  let supbaseSubscriptionActive = false;
+  
   try {
-    // Try to subscribe to Supabase real-time changes
-    // Wrap in try-catch to handle WebSocket connection issues
-    try {
-      const channel = supabase
-        .channel('public:waiting_customers')
-        .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'waiting_customers' }, (payload) => {
-          // Refetch all data when a change occurs
-          fetchQueueFromDatabase();
-        })
-        .subscribe();
-        
-      // Initial fetch
-      fetchQueueFromDatabase();
-      
-      // Return unsubscribe function
-      return () => {
-        const index = subscribers.indexOf(callback);
-        if (index !== -1) {
-          subscribers.splice(index, 1);
-        }
-        supabase.removeChannel(channel);
-      };
-    } catch (wsError) {
-      console.warn("WebSocket connection failed, falling back to local updates", wsError);
-      // Continue with local updates only
+    // Safer way to check if we can use Supabase
+    if (supabase && typeof supabase.channel === 'function') {
+      try {
+        const channel = supabase
+          .channel('public:waiting_customers')
+          .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'waiting_customers' }, (payload) => {
+            fetchQueueFromDatabase();
+          })
+          .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+              supbaseSubscriptionActive = true;
+              fetchQueueFromDatabase(); // Initial fetch when subscription is successful
+            } else {
+              console.warn("Supabase subscription status:", status);
+            }
+          });
+          
+        // Return unsubscribe function that handles both Supabase and local
+        return () => {
+          const index = subscribers.indexOf(callback);
+          if (index !== -1) {
+            subscribers.splice(index, 1);
+          }
+          
+          if (supbaseSubscriptionActive) {
+            supabase.removeChannel(channel);
+          }
+        };
+      } catch (wsError) {
+        console.warn("WebSocket connection failed, falling back to local updates", wsError);
+      }
     }
   } catch (error) {
-    console.warn("Failed to subscribe to database changes, using local updates only", error);
+    console.warn("Failed to set up Supabase connection, using local updates only", error);
   }
   
-  // Return unsubscribe function for local updates only
+  // If we reach here, we're using local updates only
+  // Set up a polling mechanism as a fallback
+  const pollingInterval = setInterval(() => {
+    callback({ ...currentQueue });
+  }, 5000);
+  
+  // Return unsubscribe function for local updates
   return () => {
     const index = subscribers.indexOf(callback);
     if (index !== -1) {
       subscribers.splice(index, 1);
     }
+    clearInterval(pollingInterval);
   };
 };
 

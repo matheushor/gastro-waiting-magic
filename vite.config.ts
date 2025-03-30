@@ -9,11 +9,12 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
-    hmr: {
-      // This ensures WebSockets work correctly in production builds
-      clientPort: 443,
-      protocol: 'wss',
-    },
+  },
+  preview: {
+    port: 8080,
+  },
+  build: {
+    outDir: "dist",
   },
   plugins: [
     react(),
@@ -24,5 +25,9 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  // Define any missing variables that might be expected by Vite
+  define: {
+    __WS_TOKEN__: JSON.stringify("dummy-token"),
   },
 }));
