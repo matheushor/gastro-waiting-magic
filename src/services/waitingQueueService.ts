@@ -121,23 +121,28 @@ export const subscribeToQueueChanges = (callback: (state: WaitingQueueState) => 
     console.error("Erro na busca inicial:", error);
   });
 
-  // Simplificando o tipo para resolver o erro de tipo profundo
+  // Resolvendo o erro de tipo profundo usando tipagem explícita
+  type PostgresChangesFilter = {
+    event: '*' | 'INSERT' | 'UPDATE' | 'DELETE';
+    schema: string;
+    table: string;
+  };
+
   const channel = supabase
     .channel('public:waiting_customers')
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'waiting_customers'
-    } as any, async () => {
-      // A cada mudança, busca todos os dados novamente
-      try {
-        const customers = await fetchAllCustomers();
-        const currentlyServing = customers.find(c => c.status === 'called') || null;
-        callback({ customers, currentlyServing });
-      } catch (error) {
-        console.error("Erro ao atualizar após mudança:", error);
+    .on('postgres_changes', 
+      { event: '*', schema: 'public', table: 'waiting_customers' } as PostgresChangesFilter, 
+      async () => {
+        // A cada mudança, busca todos os dados novamente
+        try {
+          const customers = await fetchAllCustomers();
+          const currentlyServing = customers.find(c => c.status === 'called') || null;
+          callback({ customers, currentlyServing });
+        } catch (error) {
+          console.error("Erro ao atualizar após mudança:", error);
+        }
       }
-    })
+    )
     .subscribe();
 
   // Retorna uma função para cancelar a assinatura

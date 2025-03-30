@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Customer } from "@/types";
 import { Clock, AlertCircle, X, Users, User, Shield, Heart, Home, Wind, ShieldAlert } from "lucide-react";
@@ -117,22 +118,6 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
     );
   };
 
-  const calculateAverageWaitTime = () => {
-    const waitingCustomers = customers.filter(c => c.status === 'waiting');
-    if (waitingCustomers.length <= 1) return null;
-    
-    const timestamps = waitingCustomers.map(c => c.timestamp).sort((a, b) => a - b);
-    let totalDiff = 0;
-    
-    for (let i = 1; i < timestamps.length; i++) {
-      totalDiff += timestamps[i] - timestamps[i-1];
-    }
-    
-    const avgDiffMs = totalDiff / (timestamps.length - 1);
-    return Math.ceil(avgDiffMs / 60000);
-  };
-
-  const avgWaitTime = calculateAverageWaitTime();
   const waitingCount = customers.filter(c => c.status === 'waiting').length;
   const priorityCount = customers.filter(c => c.status === 'waiting' && c.priority).length;
 
@@ -177,15 +162,6 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
               </Badge>
             )}
           </div>
-          
-          {avgWaitTime && (
-            <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4 text-gastro-orange" />
-              <span className="text-sm font-medium text-gastro-orange">
-                ~{avgWaitTime} min por pessoa
-              </span>
-            </div>
-          )}
         </div>
         
         <div className="space-y-3">
@@ -262,12 +238,9 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
         {waitingCount > 0 && (
           <div className="mt-4 p-4 bg-blue-50 rounded-lg">
             <p className="text-sm text-gastro-gray">
-              Tempo estimado de espera: <strong className="text-gastro-blue">
-                {avgWaitTime ? `~${avgWaitTime * waitingCount} minutos` : 'Calculando...'}
+              <strong className="text-gastro-blue">
+                Pessoas com necessidades especiais (gestantes, idosos, PCDs e crianças de colo) têm prioridade no atendimento.
               </strong>
-            </p>
-            <p className="text-xs text-gastro-gray mt-2">
-              Pessoas com necessidades especiais (gestantes, idosos, PCDs e crianças de colo) têm prioridade no atendimento.
             </p>
           </div>
         )}

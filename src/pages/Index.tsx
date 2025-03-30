@@ -6,8 +6,9 @@ import WaitingList from "@/components/customer/WaitingList";
 import { Customer, WaitingQueueState } from "@/types";
 import NotificationAlert from "@/components/customer/NotificationAlert";
 import { toast } from "sonner";
-import { BellRing, ClipboardList, LogIn, Bell, MapPin, AlertCircle } from "lucide-react";
+import { BellRing, ClipboardList, LogIn, Bell, MapPin, AlertCircle, Home } from "lucide-react";
 import { subscribeToQueueChanges, addCustomer, removeCustomer } from "@/services/waitingQueueService";
+import { Link } from "react-router-dom";
 
 const Index = () => {
   const [queueState, setQueueState] = useState<WaitingQueueState>({ customers: [], currentlyServing: null });
@@ -23,6 +24,9 @@ const Index = () => {
       );
       
       if (newCalled && !calledCustomer) {
+        // Verificar se este cliente é o que está sendo visualizado atualmente
+        // Isso é apenas uma simulação - na realidade, você precisaria de um sistema
+        // de autenticação ou identificação para saber qual cliente está visualizando
         setCalledCustomer(newCalled);
         
         toast(
@@ -102,14 +106,14 @@ const Index = () => {
       <div className="max-w-md mx-auto mb-8">
         <div className="bg-gradient-to-r from-gastro-blue to-blue-600 text-white p-6 rounded-lg shadow-lg">
           <h1 className="text-3xl font-bold text-center">
-            4 Gastro Burger
+            Quatro Gastro Burger
           </h1>
           <p className="text-center text-blue-100 mt-2 flex items-center justify-center gap-1">
             <MapPin className="h-4 w-4 text-gastro-orange" />
             <span>Sistema de Fila de Espera</span>
           </p>
           <div className="text-center text-xs text-blue-100 mt-1">
-            Rua Doutor José Guimarães, 758, Ribeirão Preto 14020-560
+            R. Dr. José Guimarães, 758 - Jardim Irajá, Ribeirão Preto - SP, 14020-560
           </div>
         </div>
       </div>
@@ -157,9 +161,9 @@ const Index = () => {
       )}
       
       <div className="fixed bottom-4 right-4 z-10">
-        <div className="bg-white p-3 rounded-full shadow-lg border border-blue-100 flex items-center justify-center">
-          <AlertCircle className="h-5 w-5 text-gastro-blue" />
-        </div>
+        <Link to="/" className="bg-white p-3 rounded-full shadow-lg border border-blue-100 flex items-center justify-center hover:bg-blue-50 transition-colors">
+          <Home className="h-5 w-5 text-gastro-blue" />
+        </Link>
       </div>
     </div>
   );
