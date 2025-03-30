@@ -9,7 +9,7 @@ export const customerToDbFormat = (customer: Customer) => {
     name: customer.name,
     phone: customer.phone,
     party_size: customer.partySize,
-    preferences: customer.preferences as Json, // Cast para Json type do Supabase
+    preferences: customer.preferences as unknown as Json, // Fixed type casting
     timestamp: customer.timestamp,
     status: customer.status,
     priority: customer.priority || false, // Add priority field
