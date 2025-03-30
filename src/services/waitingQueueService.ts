@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Customer, WaitingQueueState } from "@/types";
 import { Json } from "@/integrations/supabase/types";
@@ -121,12 +120,16 @@ export const subscribeToQueueChanges = (callback: (state: WaitingQueueState) => 
     console.error("Erro na busca inicial:", error);
   });
 
-  // Fix for excessive type instantiation - use any type
+  // Fix for excessive type instantiation - explicitly type the channel
   const channel = supabase
     .channel('public:waiting_customers')
     .on(
-      'postgres_changes' as any, 
-      { event: '*', schema: 'public', table: 'waiting_customers' } as any,
+      'postgres_changes' as any,
+      { 
+        event: '*', 
+        schema: 'public', 
+        table: 'waiting_customers' 
+      } as any,
       async () => {
         // A cada mudança, busca todos os dados novamente
         try {
