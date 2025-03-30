@@ -30,11 +30,8 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Define environment variables properly without process.env
+  // Completely remove process.env references and use direct string values
   define: {
-    __WS_TOKEN__: JSON.stringify("dummy-token"),
-    'process.env': {},
+    __WS_TOKEN__: '"dummy-token"',
   },
-  // Ensure proper env variable handling
-  envPrefix: "VITE_",
 }));
