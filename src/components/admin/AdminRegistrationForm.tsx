@@ -84,7 +84,7 @@ const AdminRegistrationForm: React.FC<AdminRegistrationFormProps> = ({ onRegiste
                          preferences.disabled || preferences.infant;
                          
       const newCustomer: Customer = {
-        id: Math.random().toString(36).substring(2, 9),
+        id: crypto.randomUUID(), // Generate proper UUID
         name,
         // Usando número aleatório como telefone para clientes cadastrados pelo admin
         phone: `9${Math.floor(Math.random() * 90000000) + 10000000}`,

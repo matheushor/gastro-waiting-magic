@@ -129,7 +129,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
                            preferences.disabled || preferences.infant;
                            
         const newCustomer: Customer = {
-          id: Math.random().toString(36).substring(2, 9),
+          // Let Supabase handle the UUID generation
+          id: crypto.randomUUID(), // Generate proper UUID
           name,
           phone,
           partySize,

@@ -15,7 +15,7 @@ export const fetchQueueFromDatabase = async (): Promise<void> => {
     if (data) {
       // Transform the data to match our WaitingQueueState structure
       const customers: Customer[] = data.map((item: any) => ({
-        id: item.id,
+        id: item.id, // Keep database UUID
         name: item.name,
         phone: item.phone,
         partySize: item.party_size,

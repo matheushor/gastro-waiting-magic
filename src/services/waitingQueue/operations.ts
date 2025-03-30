@@ -5,6 +5,14 @@ import { getCurrentQueue, setCurrentQueue } from "./storage";
 
 // Add a customer to the waiting queue
 export const addCustomer = async (customer: Customer): Promise<void> => {
+  // Create a proper UUID format for database
+  const supabaseCustomer = {
+    ...customer,
+    // Use Supabase's UUID generation on the server side
+    party_size: customer.partySize,
+    preferences: customer.preferences as any, // Required type assertion for Supabase
+  };
+  
   const currentQueue = getCurrentQueue();
   
   setCurrentQueue({
@@ -17,13 +25,12 @@ export const addCustomer = async (customer: Customer): Promise<void> => {
     const { error } = await supabase
       .from("waiting_customers")
       .insert({
-        id: customer.id,
-        name: customer.name,
-        phone: customer.phone,
-        party_size: customer.partySize,
-        preferences: customer.preferences as any, // Required type assertion for Supabase
-        status: customer.status,
-        timestamp: customer.timestamp,
+        name: supabaseCustomer.name,
+        phone: supabaseCustomer.phone,
+        party_size: supabaseCustomer.party_size,
+        preferences: supabaseCustomer.preferences,
+        status: supabaseCustomer.status,
+        timestamp: supabaseCustomer.timestamp,
       });
       
     if (error) throw error;
