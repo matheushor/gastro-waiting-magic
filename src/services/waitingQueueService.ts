@@ -1,152 +1,193 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { Customer, WaitingQueueState } from "@/types";
-import { Json } from "@/integrations/supabase/types";
+import { WaitingQueueState, Customer } from "../types";
+import { initialWaitingQueueState } from "../utils/mockData";
+import { supabase } from "../integrations/supabase/client";
 
-// Converte um Customer para o formato do banco de dados
-export const customerToDbFormat = (customer: Customer) => {
-  return {
-    name: customer.name,
-    phone: customer.phone,
-    party_size: customer.partySize,
-    preferences: customer.preferences as unknown as Json, // Fixed type casting
-    timestamp: customer.timestamp,
-    status: customer.status,
-    priority: customer.priority || false, // Add priority field
+// Simulating a database with local storage until we integrate a real backend
+const getStoredQueue = (): WaitingQueueState => {
+  const storedData = localStorage.getItem("waitingQueue");
+  return storedData ? JSON.parse(storedData) : initialWaitingQueueState;
+};
+
+const updateStoredQueue = (queue: WaitingQueueState) => {
+  localStorage.setItem("waitingQueue", JSON.stringify(queue));
+};
+
+// In-memory state for real-time updates
+let currentQueue = getStoredQueue();
+const subscribers: ((state: WaitingQueueState) => void)[] = [];
+
+// Notify all subscribers of state changes
+const notifySubscribers = () => {
+  subscribers.forEach((callback) => callback({ ...currentQueue }));
+};
+
+// Add a customer to the waiting queue
+export const addCustomer = async (customer: Customer): Promise<void> => {
+  currentQueue = {
+    ...currentQueue,
+    customers: [...currentQueue.customers, customer],
   };
+  
+  updateStoredQueue(currentQueue);
+  notifySubscribers();
+  
+  try {
+    // Try to sync with Supabase if available
+    const { error } = await supabase
+      .from("waiting_customers")
+      .insert([
+        {
+          customer_id: customer.id,
+          name: customer.name,
+          phone: customer.phone,
+          party_size: customer.partySize,
+          preferences: customer.preferences,
+          status: customer.status,
+          priority: customer.priority,
+          timestamp: customer.timestamp,
+        },
+      ]);
+      
+    if (error) throw error;
+    
+  } catch (error) {
+    console.warn("Failed to sync with database, using local storage instead", error);
+  }
 };
 
-// Converte um registro do banco de dados para o formato Customer
-export const dbToCustomerFormat = (record: any): Customer => {
-  return {
-    id: record.id,
-    name: record.name,
-    phone: record.phone,
-    partySize: record.party_size,
-    preferences: record.preferences as any, // Use any to avoid deep type issues
-    timestamp: record.timestamp,
-    status: record.status as 'waiting' | 'called' | 'seated' | 'left',
-    priority: record.priority || false, // Add priority field
+// Call a customer from the waiting queue
+export const callCustomer = async (id: string): Promise<void> => {
+  const customerIndex = currentQueue.customers.findIndex((c) => c.id === id);
+  
+  if (customerIndex === -1) return;
+  
+  const updatedCustomers = [...currentQueue.customers];
+  updatedCustomers[customerIndex] = {
+    ...updatedCustomers[customerIndex],
+    status: "called",
   };
-};
-
-// Busca todos os clientes na fila
-export const fetchAllCustomers = async (): Promise<Customer[]> => {
-  const { data, error } = await supabase
-    .from('waiting_customers')
-    .select('*')
-    .order('timestamp', { ascending: true });
-
-  if (error) {
-    console.error("Erro ao buscar clientes:", error);
-    throw error;
+  
+  currentQueue = {
+    ...currentQueue,
+    customers: updatedCustomers,
+    currentlyServing: updatedCustomers[customerIndex],
+  };
+  
+  updateStoredQueue(currentQueue);
+  notifySubscribers();
+  
+  try {
+    // Try to sync with Supabase if available
+    const { error } = await supabase
+      .from("waiting_customers")
+      .update({ status: "called" })
+      .match({ customer_id: id });
+      
+    if (error) throw error;
+    
+  } catch (error) {
+    console.warn("Failed to sync with database, using local storage instead", error);
   }
-
-  return data.map(dbToCustomerFormat);
 };
 
-// Adiciona um novo cliente à fila
-export const addCustomer = async (customer: Customer): Promise<Customer> => {
-  const { data, error } = await supabase
-    .from('waiting_customers')
-    .insert(customerToDbFormat(customer))
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Erro ao adicionar cliente:", error);
-    throw error;
-  }
-
-  return dbToCustomerFormat(data);
-};
-
-// Remove um cliente da fila
+// Remove a customer from the waiting queue
 export const removeCustomer = async (id: string): Promise<void> => {
-  const { error } = await supabase
-    .from('waiting_customers')
-    .delete()
-    .match({ id });
-
-  if (error) {
-    console.error("Erro ao remover cliente:", error);
-    throw error;
-  }
-};
-
-// Atualiza o status de um cliente
-export const updateCustomerStatus = async (
-  id: string, 
-  status: 'waiting' | 'called' | 'seated' | 'left'
-): Promise<Customer> => {
-  const { data, error } = await supabase
-    .from('waiting_customers')
-    .update({ status })
-    .match({ id })
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Erro ao atualizar status do cliente:", error);
-    throw error;
-  }
-
-  return dbToCustomerFormat(data);
-};
-
-// Fetch priority customers only
-export const fetchPriorityCustomers = async (): Promise<Customer[]> => {
-  const { data, error } = await supabase
-    .from('waiting_customers')
-    .select('*')
-    .eq('priority', true)
-    .eq('status', 'waiting')
-    .order('timestamp', { ascending: true });
-
-  if (error) {
-    console.error("Erro ao buscar clientes prioritários:", error);
-    throw error;
-  }
-
-  return data.map(dbToCustomerFormat);
-};
-
-// Configura uma assinatura em tempo real para atualizações na fila
-export const subscribeToQueueChanges = (callback: (state: WaitingQueueState) => void) => {
-  // Busca inicial dos dados
-  fetchAllCustomers().then(customers => {
-    const currentlyServing = customers.find(c => c.status === 'called') || null;
-    callback({ customers, currentlyServing });
-  }).catch(error => {
-    console.error("Erro na busca inicial:", error);
-  });
-
-  // Resolvendo o erro de tipo profundo usando tipagem explícita
-  type PostgresChangesFilter = {
-    event: '*' | 'INSERT' | 'UPDATE' | 'DELETE';
-    schema: string;
-    table: string;
+  currentQueue = {
+    ...currentQueue,
+    customers: currentQueue.customers.filter((c) => c.id !== id),
+    currentlyServing: currentQueue.currentlyServing?.id === id ? null : currentQueue.currentlyServing,
   };
+  
+  updateStoredQueue(currentQueue);
+  notifySubscribers();
+  
+  try {
+    // Try to sync with Supabase if available
+    const { error } = await supabase
+      .from("waiting_customers")
+      .delete()
+      .match({ customer_id: id });
+      
+    if (error) throw error;
+    
+  } catch (error) {
+    console.warn("Failed to sync with database, using local storage instead", error);
+  }
+};
 
-  const channel = supabase
-    .channel('public:waiting_customers')
-    .on('postgres_changes', 
-      { event: '*', schema: 'public', table: 'waiting_customers' } as PostgresChangesFilter, 
-      async () => {
-        // A cada mudança, busca todos os dados novamente
-        try {
-          const customers = await fetchAllCustomers();
-          const currentlyServing = customers.find(c => c.status === 'called') || null;
-          callback({ customers, currentlyServing });
-        } catch (error) {
-          console.error("Erro ao atualizar após mudança:", error);
-        }
+// Subscribe to queue changes
+export const subscribeToQueueChanges = (
+  callback: (state: WaitingQueueState) => void
+) => {
+  subscribers.push(callback);
+  callback({ ...currentQueue });
+  
+  try {
+    // Try to subscribe to Supabase real-time changes
+    const channel = supabase
+      .channel('public:waiting_customers')
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'waiting_customers' }, (payload) => {
+        // Refetch all data when a change occurs
+        fetchQueueFromDatabase();
+      })
+      .subscribe();
+      
+    // Initial fetch
+    fetchQueueFromDatabase();
+    
+    // Return unsubscribe function
+    return () => {
+      const index = subscribers.indexOf(callback);
+      if (index !== -1) {
+        subscribers.splice(index, 1);
       }
-    )
-    .subscribe();
+      supabase.removeChannel(channel);
+    };
+  } catch (error) {
+    console.warn("Failed to subscribe to database changes, using local updates only", error);
+    
+    // Return unsubscribe function for local updates only
+    return () => {
+      const index = subscribers.indexOf(callback);
+      if (index !== -1) {
+        subscribers.splice(index, 1);
+      }
+    };
+  }
+};
 
-  // Retorna uma função para cancelar a assinatura
-  return () => {
-    supabase.removeChannel(channel);
-  };
+// Fetch the latest queue data from the database
+const fetchQueueFromDatabase = async () => {
+  try {
+    const { data, error } = await supabase
+      .from("waiting_customers")
+      .select("*");
+      
+    if (error) throw error;
+    
+    if (data) {
+      // Transform the data to match our WaitingQueueState structure
+      const customers: Customer[] = data.map((item: any) => ({
+        id: item.customer_id,
+        name: item.name,
+        phone: item.phone,
+        partySize: item.party_size,
+        preferences: item.preferences,
+        timestamp: item.timestamp,
+        status: item.status,
+        priority: item.priority,
+      }));
+      
+      currentQueue = {
+        ...currentQueue,
+        customers,
+      };
+      
+      updateStoredQueue(currentQueue);
+      notifySubscribers();
+    }
+  } catch (error) {
+    console.warn("Failed to fetch from database, using local storage instead", error);
+  }
 };
