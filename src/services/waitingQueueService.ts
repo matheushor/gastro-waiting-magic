@@ -121,7 +121,7 @@ export const subscribeToQueueChanges = (callback: (state: WaitingQueueState) => 
     console.error("Erro na busca inicial:", error);
   });
 
-  // Configura o canal de tempo real
+  // Configura o canal de tempo real usando type any para evitar problemas de tipo profundo
   const channel = supabase
     .channel('public:waiting_customers')
     .on('postgres_changes', {
