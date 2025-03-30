@@ -1,4 +1,3 @@
-
 import { WaitingQueueState, Customer } from "../types";
 import { initialWaitingQueueState } from "../utils/mockData";
 import { supabase } from "../integrations/supabase/client";
@@ -161,36 +160,42 @@ export const subscribeToQueueChanges = (
   
   try {
     // Try to subscribe to Supabase real-time changes
-    const channel = supabase
-      .channel('public:waiting_customers')
-      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'waiting_customers' }, (payload) => {
-        // Refetch all data when a change occurs
-        fetchQueueFromDatabase();
-      })
-      .subscribe();
+    // Wrap in try-catch to handle WebSocket connection issues
+    try {
+      const channel = supabase
+        .channel('public:waiting_customers')
+        .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'waiting_customers' }, (payload) => {
+          // Refetch all data when a change occurs
+          fetchQueueFromDatabase();
+        })
+        .subscribe();
+        
+      // Initial fetch
+      fetchQueueFromDatabase();
       
-    // Initial fetch
-    fetchQueueFromDatabase();
-    
-    // Return unsubscribe function
-    return () => {
-      const index = subscribers.indexOf(callback);
-      if (index !== -1) {
-        subscribers.splice(index, 1);
-      }
-      supabase.removeChannel(channel);
-    };
+      // Return unsubscribe function
+      return () => {
+        const index = subscribers.indexOf(callback);
+        if (index !== -1) {
+          subscribers.splice(index, 1);
+        }
+        supabase.removeChannel(channel);
+      };
+    } catch (wsError) {
+      console.warn("WebSocket connection failed, falling back to local updates", wsError);
+      // Continue with local updates only
+    }
   } catch (error) {
     console.warn("Failed to subscribe to database changes, using local updates only", error);
-    
-    // Return unsubscribe function for local updates only
-    return () => {
-      const index = subscribers.indexOf(callback);
-      if (index !== -1) {
-        subscribers.splice(index, 1);
-      }
-    };
   }
+  
+  // Return unsubscribe function for local updates only
+  return () => {
+    const index = subscribers.indexOf(callback);
+    if (index !== -1) {
+      subscribers.splice(index, 1);
+    }
+  };
 };
 
 // Fetch the latest queue data from the database
