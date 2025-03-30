@@ -7,7 +7,7 @@ import { fetchQueueFromDatabase } from "./database";
 // Subscribe to queue changes
 export const subscribeToQueueChanges = (
   callback: (state: WaitingQueueState) => void
-) => {
+): (() => void) => {
   subscribers.push(callback);
   callback({ ...getCurrentQueue() });
   
@@ -20,10 +20,10 @@ export const subscribeToQueueChanges = (
       try {
         const channel = supabase
           .channel('public:waiting_customers')
-          .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'waiting_customers' }, (payload) => {
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'waiting_customers' }, (payload) => {
             fetchQueueFromDatabase();
           })
-          .subscribe((status: any) => {
+          .subscribe((status) => {
             if (status === 'SUBSCRIBED') {
               supbaseSubscriptionActive = true;
               fetchQueueFromDatabase(); // Initial fetch when subscription is successful

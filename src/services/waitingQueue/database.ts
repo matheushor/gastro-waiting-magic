@@ -4,7 +4,7 @@ import { Customer } from "../../types";
 import { getCurrentQueue, setCurrentQueue } from "./storage";
 
 // Fetch the latest queue data from the database
-export const fetchQueueFromDatabase = async () => {
+export const fetchQueueFromDatabase = async (): Promise<void> => {
   try {
     const { data, error } = await supabase
       .from("waiting_customers")

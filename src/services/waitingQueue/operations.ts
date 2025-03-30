@@ -21,10 +21,10 @@ export const addCustomer = async (customer: Customer): Promise<void> => {
         name: customer.name,
         phone: customer.phone,
         party_size: customer.partySize,
-        preferences: customer.preferences as any, // Cast to any to resolve type issue
+        preferences: customer.preferences,
         status: customer.status,
         timestamp: customer.timestamp,
-      }] as any);
+      }]);
       
     if (error) throw error;
     
