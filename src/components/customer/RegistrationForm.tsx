@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Customer, Preferences } from "@/types";
 import { getCurrentPosition, isWithinRadius, RESTAURANT_LOCATION } from "@/utils/geoUtils";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, MapPin, Baby, Dog, UserCog, Accessibility, HeartPulse, Home, Wind } from "lucide-react";
+import { AlertCircle, MapPin, User, Users, Heart, Shield, Home, Wind } from "lucide-react";
 
 interface RegistrationFormProps {
   onRegister: (customer: Customer) => void;
@@ -163,7 +163,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
     <div className="bg-white rounded-lg shadow-lg border border-blue-100 overflow-hidden">
       <div className="bg-gradient-to-r from-gastro-blue to-blue-600 text-white p-6">
         <h2 className="text-2xl font-bold mb-2 flex items-center justify-center gap-2">
-          <UserCog className="h-6 w-6" />
+          <User className="h-6 w-6" />
           Entre na Fila
         </h2>
         <p className="text-blue-100 text-center">
@@ -181,7 +181,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
       <form onSubmit={handleSubmit} className="p-6 space-y-5">
         <div>
           <Label htmlFor="name" className="text-gastro-gray font-semibold flex items-center gap-1">
-            <UserCog className="h-4 w-4 text-gastro-blue" />
+            <User className="h-4 w-4 text-gastro-blue" />
             Nome completo
           </Label>
           <Input
@@ -196,7 +196,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
 
         <div>
           <Label htmlFor="phone" className="text-gastro-gray font-semibold flex items-center gap-1">
-            <HeartPulse className="h-4 w-4 text-gastro-blue" />
+            <Heart className="h-4 w-4 text-gastro-blue" />
             Telefone
           </Label>
           <Input
@@ -216,7 +216,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
 
         <div>
           <Label htmlFor="partySize" className="text-gastro-gray font-semibold flex items-center gap-1">
-            <UserCog className="h-4 w-4 text-gastro-blue" />
+            <User className="h-4 w-4 text-gastro-blue" />
             Número de pessoas
           </Label>
           <Input
@@ -252,7 +252,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
                 htmlFor="pregnant"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 cursor-pointer"
               >
-                <HeartPulse className="h-4 w-4 text-gastro-orange" />
+                <Heart className="h-4 w-4 text-gastro-orange" />
                 Gestante
               </label>
             </div>
@@ -269,7 +269,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
                 htmlFor="elderly"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 cursor-pointer"
               >
-                <UserCog className="h-4 w-4 text-gastro-orange" />
+                <User className="h-4 w-4 text-gastro-orange" />
                 Idoso
               </label>
             </div>
@@ -286,7 +286,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
                 htmlFor="disabled"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 cursor-pointer"
               >
-                <Accessibility className="h-4 w-4 text-gastro-orange" />
+                <Heart className="h-4 w-4 text-gastro-orange" />
                 PCD
               </label>
             </div>
@@ -303,7 +303,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
                 htmlFor="infant"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 cursor-pointer"
               >
-                <Baby className="h-4 w-4 text-gastro-orange" />
+                <User className="h-4 w-4 text-gastro-orange" />
                 Criança de colo
               </label>
             </div>
@@ -325,7 +325,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
                 htmlFor="withDog"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 cursor-pointer"
               >
-                <Dog className="h-4 w-4 text-gastro-blue" />
+                <Shield className="h-4 w-4 text-gastro-blue" />
                 Com cachorro (seleciona automaticamente mesa externa)
               </label>
             </div>

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Customer } from "@/types";
-import { Clock, AlertCircle, X, Users, User, Dog, Accessibility, Baby, HeartPulse, Home, Wind, UserCog, ShieldAlert } from "lucide-react";
+import { Clock, AlertCircle, X, Users, User, Shield, Heart, Home, Wind, ShieldAlert } from "lucide-react";
 import { formatWaitingTime } from "@/utils/geoUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -68,15 +68,15 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
     
     switch(key) {
       case 'pregnant':
-        return <HeartPulse className="h-3 w-3 text-gastro-orange" />;
+        return <Heart className="h-3 w-3 text-gastro-orange" />;
       case 'elderly':
-        return <UserCog className="h-3 w-3 text-gastro-orange" />;
+        return <User className="h-3 w-3 text-gastro-orange" />;
       case 'disabled':
-        return <Accessibility className="h-3 w-3 text-gastro-orange" />;
+        return <Heart className="h-3 w-3 text-gastro-orange" />;
       case 'infant':
-        return <Baby className="h-3 w-3 text-gastro-orange" />;
+        return <User className="h-3 w-3 text-gastro-orange" />;
       case 'withDog':
-        return <Dog className="h-3 w-3 text-gastro-blue" />;
+        return <Shield className="h-3 w-3 text-gastro-blue" />;
       case 'indoor':
         return <Home className="h-3 w-3 text-gastro-blue" />;
       case 'outdoor':

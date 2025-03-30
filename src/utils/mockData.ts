@@ -1,4 +1,3 @@
-
 import { Customer, WaitingQueueState } from "../types";
 
 // Generate a unique ID
