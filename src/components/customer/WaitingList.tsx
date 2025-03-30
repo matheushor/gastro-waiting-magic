@@ -1,7 +1,6 @@
-
 import React, { useState } from "react";
 import { Customer } from "@/types";
-import { Clock, AlertCircle, X, Users, User, Shield, Heart, Home, Wind, ShieldAlert } from "lucide-react";
+import { Clock, AlertCircle, X, Users, User, Dog, Wheelchair, Baby, HeartPulse, Home, Wind, UserCog, ShieldAlert } from "lucide-react";
 import { formatWaitingTime } from "@/utils/geoUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -20,28 +19,32 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
   const [confirmPhone, setConfirmPhone] = useState("");
   const [error, setError] = useState("");
 
+  // First, separate customers by status and priority
   const calledCustomers = customers.filter(c => c.status === "called");
   const priorityCustomers = customers.filter(c => c.status === "waiting" && c.priority);
   const regularCustomers = customers.filter(c => c.status === "waiting" && !c.priority);
   
+  // Sort each group by timestamp (earliest first)
   const sortByTimestamp = (a: Customer, b: Customer) => a.timestamp - b.timestamp;
   const sortedPriorityCustomers = [...priorityCustomers].sort(sortByTimestamp);
   const sortedRegularCustomers = [...regularCustomers].sort(sortByTimestamp);
   
+  // Combine all customers in the right order
   const sortedCustomers = [
     ...calledCustomers,
     ...sortedPriorityCustomers,
     ...sortedRegularCustomers
   ];
 
+  // Assign positions to waiting customers
   let waitingPosition = 1;
   sortedCustomers.forEach(customer => {
     if (customer.status === "waiting") {
       customer.position = waitingPosition++;
     } else if (customer.status === "called") {
-      customer.position = 0;
+      customer.position = 0; // Being served
     } else {
-      customer.position = undefined;
+      customer.position = undefined; // Not in the queue anymore
     }
   });
 
@@ -69,15 +72,15 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
     
     switch(key) {
       case 'pregnant':
-        return <Heart className="h-3 w-3 text-gastro-orange" />;
+        return <HeartPulse className="h-3 w-3 text-gastro-orange" />;
       case 'elderly':
-        return <User className="h-3 w-3 text-gastro-orange" />;
+        return <UserCog className="h-3 w-3 text-gastro-orange" />;
       case 'disabled':
-        return <Heart className="h-3 w-3 text-gastro-orange" />;
+        return <Wheelchair className="h-3 w-3 text-gastro-orange" />;
       case 'infant':
-        return <User className="h-3 w-3 text-gastro-orange" />;
+        return <Baby className="h-3 w-3 text-gastro-orange" />;
       case 'withDog':
-        return <Shield className="h-3 w-3 text-gastro-blue" />;
+        return <Dog className="h-3 w-3 text-gastro-blue" />;
       case 'indoor':
         return <Home className="h-3 w-3 text-gastro-blue" />;
       case 'outdoor':
@@ -91,11 +94,13 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
     const { preferences } = customer;
     const items = [];
     
+    // Priority preferences
     if (preferences.pregnant) items.push({ key: 'pregnant', label: 'Gestante', priority: true });
     if (preferences.elderly) items.push({ key: 'elderly', label: 'Idoso', priority: true });
     if (preferences.disabled) items.push({ key: 'disabled', label: 'PCD', priority: true });
     if (preferences.infant) items.push({ key: 'infant', label: 'Criança de colo', priority: true });
     
+    // Other preferences
     if (preferences.withDog) items.push({ key: 'withDog', label: 'Com cachorro', priority: false });
     if (preferences.indoor) items.push({ key: 'indoor', label: 'Mesa interna', priority: false });
     if (preferences.outdoor) items.push({ key: 'outdoor', label: 'Mesa externa', priority: false });
@@ -117,7 +122,24 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
       </div>
     );
   };
-
+  
+  // Calculate average waiting time
+  const calculateAverageWaitTime = () => {
+    const waitingCustomers = customers.filter(c => c.status === 'waiting');
+    if (waitingCustomers.length <= 1) return null;
+    
+    const timestamps = waitingCustomers.map(c => c.timestamp).sort((a, b) => a - b);
+    let totalDiff = 0;
+    
+    for (let i = 1; i < timestamps.length; i++) {
+      totalDiff += timestamps[i] - timestamps[i-1];
+    }
+    
+    const avgDiffMs = totalDiff / (timestamps.length - 1);
+    return Math.ceil(avgDiffMs / 60000); // Convert to minutes and round up
+  };
+  
+  const avgWaitTime = calculateAverageWaitTime();
   const waitingCount = customers.filter(c => c.status === 'waiting').length;
   const priorityCount = customers.filter(c => c.status === 'waiting' && c.priority).length;
 
@@ -162,6 +184,15 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
               </Badge>
             )}
           </div>
+          
+          {avgWaitTime && (
+            <div className="flex items-center gap-1">
+              <Clock className="h-4 w-4 text-gastro-orange" />
+              <span className="text-sm font-medium text-gastro-orange">
+                ~{avgWaitTime} min por pessoa
+              </span>
+            </div>
+          )}
         </div>
         
         <div className="space-y-3">
@@ -238,9 +269,12 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
         {waitingCount > 0 && (
           <div className="mt-4 p-4 bg-blue-50 rounded-lg">
             <p className="text-sm text-gastro-gray">
-              <strong className="text-gastro-blue">
-                Pessoas com necessidades especiais (gestantes, idosos, PCDs e crianças de colo) têm prioridade no atendimento.
+              Tempo estimado de espera: <strong className="text-gastro-blue">
+                {avgWaitTime ? `~${avgWaitTime * waitingCount} minutos` : 'Calculando...'}
               </strong>
+            </p>
+            <p className="text-xs text-gastro-gray mt-2">
+              Pessoas com necessidades especiais (gestantes, idosos, PCDs e crianças de colo) têm prioridade no atendimento.
             </p>
           </div>
         )}

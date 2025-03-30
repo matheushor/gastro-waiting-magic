@@ -20,12 +20,10 @@ export const createMockCustomers = (): Customer[] => {
         disabled: false,
         infant: true,
         withDog: false,
-        indoor: true,
-        outdoor: false
+        indoor: true
       },
       timestamp: Date.now() - 1000 * 60 * 45, // 45 minutes ago
-      status: "waiting",
-      priority: true // Set priority based on preferences
+      status: "waiting"
     },
     {
       id: generateId(),
@@ -38,12 +36,10 @@ export const createMockCustomers = (): Customer[] => {
         disabled: false,
         infant: false,
         withDog: false,
-        indoor: false,
-        outdoor: true
+        indoor: false
       },
       timestamp: Date.now() - 1000 * 60 * 30, // 30 minutes ago
-      status: "waiting",
-      priority: true // Set priority based on preferences
+      status: "waiting"
     },
     {
       id: generateId(),
@@ -56,12 +52,10 @@ export const createMockCustomers = (): Customer[] => {
         disabled: false,
         infant: false,
         withDog: true,
-        indoor: false,
-        outdoor: true
+        indoor: false
       },
       timestamp: Date.now() - 1000 * 60 * 15, // 15 minutes ago
-      status: "waiting",
-      priority: false
+      status: "waiting"
     }
   ];
 };
