@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Customer } from "@/types";
-import { Clock, AlertCircle, X, Users, User, Dog, Wheelchair, Baby, HeartPulse, Home, Wind, UserCog, ShieldAlert } from "lucide-react";
+import { Clock, AlertCircle, X, Users, User, Dog, Accessibility, Baby, HeartPulse, Home, Wind, UserCog, ShieldAlert } from "lucide-react";
 import { formatWaitingTime } from "@/utils/geoUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -19,32 +19,28 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
   const [confirmPhone, setConfirmPhone] = useState("");
   const [error, setError] = useState("");
 
-  // First, separate customers by status and priority
   const calledCustomers = customers.filter(c => c.status === "called");
   const priorityCustomers = customers.filter(c => c.status === "waiting" && c.priority);
   const regularCustomers = customers.filter(c => c.status === "waiting" && !c.priority);
   
-  // Sort each group by timestamp (earliest first)
   const sortByTimestamp = (a: Customer, b: Customer) => a.timestamp - b.timestamp;
   const sortedPriorityCustomers = [...priorityCustomers].sort(sortByTimestamp);
   const sortedRegularCustomers = [...regularCustomers].sort(sortByTimestamp);
   
-  // Combine all customers in the right order
   const sortedCustomers = [
     ...calledCustomers,
     ...sortedPriorityCustomers,
     ...sortedRegularCustomers
   ];
 
-  // Assign positions to waiting customers
   let waitingPosition = 1;
   sortedCustomers.forEach(customer => {
     if (customer.status === "waiting") {
       customer.position = waitingPosition++;
     } else if (customer.status === "called") {
-      customer.position = 0; // Being served
+      customer.position = 0;
     } else {
-      customer.position = undefined; // Not in the queue anymore
+      customer.position = undefined;
     }
   });
 
@@ -76,7 +72,7 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
       case 'elderly':
         return <UserCog className="h-3 w-3 text-gastro-orange" />;
       case 'disabled':
-        return <Wheelchair className="h-3 w-3 text-gastro-orange" />;
+        return <Accessibility className="h-3 w-3 text-gastro-orange" />;
       case 'infant':
         return <Baby className="h-3 w-3 text-gastro-orange" />;
       case 'withDog':
@@ -94,13 +90,11 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
     const { preferences } = customer;
     const items = [];
     
-    // Priority preferences
     if (preferences.pregnant) items.push({ key: 'pregnant', label: 'Gestante', priority: true });
     if (preferences.elderly) items.push({ key: 'elderly', label: 'Idoso', priority: true });
     if (preferences.disabled) items.push({ key: 'disabled', label: 'PCD', priority: true });
     if (preferences.infant) items.push({ key: 'infant', label: 'Criança de colo', priority: true });
     
-    // Other preferences
     if (preferences.withDog) items.push({ key: 'withDog', label: 'Com cachorro', priority: false });
     if (preferences.indoor) items.push({ key: 'indoor', label: 'Mesa interna', priority: false });
     if (preferences.outdoor) items.push({ key: 'outdoor', label: 'Mesa externa', priority: false });
@@ -122,8 +116,7 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
       </div>
     );
   };
-  
-  // Calculate average waiting time
+
   const calculateAverageWaitTime = () => {
     const waitingCustomers = customers.filter(c => c.status === 'waiting');
     if (waitingCustomers.length <= 1) return null;
@@ -136,9 +129,9 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) =>
     }
     
     const avgDiffMs = totalDiff / (timestamps.length - 1);
-    return Math.ceil(avgDiffMs / 60000); // Convert to minutes and round up
+    return Math.ceil(avgDiffMs / 60000);
   };
-  
+
   const avgWaitTime = calculateAverageWaitTime();
   const waitingCount = customers.filter(c => c.status === 'waiting').length;
   const priorityCount = customers.filter(c => c.status === 'waiting' && c.priority).length;

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +6,7 @@ import { toast } from "sonner";
 import { Customer, Preferences } from "@/types";
 import { getCurrentPosition, isWithinRadius, RESTAURANT_LOCATION } from "@/utils/geoUtils";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, MapPin, Baby, Dog, UserCog, Wheelchair, HeartPulse, Home, Wind } from "lucide-react";
+import { AlertCircle, MapPin, Baby, Dog, UserCog, Accessibility, HeartPulse, Home, Wind } from "lucide-react";
 
 interface RegistrationFormProps {
   onRegister: (customer: Customer) => void;
@@ -31,9 +30,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
   
   const [bypassGeolocation, setBypassGeolocation] = useState(false);
 
-  // Effect to handle automatic preference selections
   useEffect(() => {
-    // If "withDog" is selected, automatically select "outdoor" and deselect "indoor"
     if (preferences.withDog) {
       setPreferences(prev => ({
         ...prev,
@@ -42,9 +39,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
       }));
     }
     
-    // Make indoor and outdoor mutually exclusive
     if (preferences.indoor && preferences.outdoor) {
-      // If the user just selected indoor, deselect outdoor
       setPreferences(prev => ({
         ...prev,
         outdoor: false
@@ -56,7 +51,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
     setPreferences(prev => {
       const newPrefs = { ...prev, [key]: !prev[key] };
       
-      // Handle mutual exclusivity between indoor and outdoor
       if (key === 'indoor' && newPrefs.indoor) {
         newPrefs.outdoor = false;
       } else if (key === 'outdoor' && newPrefs.outdoor) {
@@ -125,7 +119,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
       }
       
       if (isNearby || bypassGeolocation) {
-        // Determine if the customer should have priority status
         const hasPriority = preferences.pregnant || preferences.elderly || 
                            preferences.disabled || preferences.infant;
                            
@@ -293,7 +286,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
                 htmlFor="disabled"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 cursor-pointer"
               >
-                <Wheelchair className="h-4 w-4 text-gastro-orange" />
+                <Accessibility className="h-4 w-4 text-gastro-orange" />
                 PCD
               </label>
             </div>

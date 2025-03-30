@@ -75,7 +75,10 @@ export const removeCustomer = async (id: string): Promise<void> => {
 };
 
 // Atualiza o status de um cliente
-export const updateCustomerStatus = async (id: string, status: 'waiting' | 'called' | 'seated' | 'left'): Promise<Customer> => {
+export const updateCustomerStatus = async (
+  id: string, 
+  status: 'waiting' | 'called' | 'seated' | 'left'
+): Promise<Customer> => {
   const { data, error } = await supabase
     .from('waiting_customers')
     .update({ status })
