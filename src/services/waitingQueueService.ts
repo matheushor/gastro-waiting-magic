@@ -36,24 +36,60 @@ export const addCustomer = async (customer: Customer): Promise<void> => {
     // Try to sync with Supabase if available
     const { error } = await supabase
       .from("waiting_customers")
-      .insert([
-        {
-          customer_id: customer.id,
-          name: customer.name,
-          phone: customer.phone,
-          party_size: customer.partySize,
-          preferences: customer.preferences,
-          status: customer.status,
-          priority: customer.priority,
-          timestamp: customer.timestamp,
-        },
-      ]);
+      .insert([{
+        id: customer.id,
+        name: customer.name,
+        phone: customer.phone,
+        party_size: customer.partySize,
+        preferences: customer.preferences as any, // Cast to any to resolve type issue
+        status: customer.status,
+        timestamp: customer.timestamp,
+      }] as any);
       
     if (error) throw error;
     
   } catch (error) {
     console.warn("Failed to sync with database, using local storage instead", error);
   }
+};
+
+// Update a customer's status in the waiting queue
+export const updateCustomerStatus = async (id: string, status: "waiting" | "called" | "seated" | "left"): Promise<Customer> => {
+  const customerIndex = currentQueue.customers.findIndex((c) => c.id === id);
+  
+  if (customerIndex === -1) throw new Error("Customer not found");
+  
+  const updatedCustomers = [...currentQueue.customers];
+  updatedCustomers[customerIndex] = {
+    ...updatedCustomers[customerIndex],
+    status,
+  };
+  
+  const updatedCustomer = updatedCustomers[customerIndex];
+  
+  currentQueue = {
+    ...currentQueue,
+    customers: updatedCustomers,
+    currentlyServing: status === "called" ? updatedCustomer : currentQueue.currentlyServing,
+  };
+  
+  updateStoredQueue(currentQueue);
+  notifySubscribers();
+  
+  try {
+    // Try to sync with Supabase if available
+    const { error } = await supabase
+      .from("waiting_customers")
+      .update({ status })
+      .eq("id", id);
+      
+    if (error) throw error;
+    
+  } catch (error) {
+    console.warn("Failed to sync with database, using local storage instead", error);
+  }
+  
+  return updatedCustomer;
 };
 
 // Call a customer from the waiting queue
@@ -82,7 +118,7 @@ export const callCustomer = async (id: string): Promise<void> => {
     const { error } = await supabase
       .from("waiting_customers")
       .update({ status: "called" })
-      .match({ customer_id: id });
+      .eq("id", id);
       
     if (error) throw error;
     
@@ -107,7 +143,7 @@ export const removeCustomer = async (id: string): Promise<void> => {
     const { error } = await supabase
       .from("waiting_customers")
       .delete()
-      .match({ customer_id: id });
+      .eq("id", id);
       
     if (error) throw error;
     
@@ -169,14 +205,14 @@ const fetchQueueFromDatabase = async () => {
     if (data) {
       // Transform the data to match our WaitingQueueState structure
       const customers: Customer[] = data.map((item: any) => ({
-        id: item.customer_id,
+        id: item.id,
         name: item.name,
         phone: item.phone,
         partySize: item.party_size,
         preferences: item.preferences,
         timestamp: item.timestamp,
         status: item.status,
-        priority: item.priority,
+        priority: item.preferences.pregnant || item.preferences.elderly || item.preferences.disabled || item.preferences.infant,
       }));
       
       currentQueue = {
