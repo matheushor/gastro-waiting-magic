@@ -121,13 +121,12 @@ export const subscribeToQueueChanges = (callback: (state: WaitingQueueState) => 
     console.error("Erro na busca inicial:", error);
   });
 
-  // Fix for typing issue #1: Use any to avoid deep type instantiation
+  // Fix for excessive type instantiation - use any type
   const channel = supabase
     .channel('public:waiting_customers')
     .on(
-      // Fix for typing issue #2: Cast postgres_changes to any
       'postgres_changes' as any, 
-      { event: '*', schema: 'public', table: 'waiting_customers' },
+      { event: '*', schema: 'public', table: 'waiting_customers' } as any,
       async () => {
         // A cada mudança, busca todos os dados novamente
         try {
