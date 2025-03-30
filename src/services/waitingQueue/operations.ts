@@ -1,17 +1,16 @@
 
 import { Customer } from "../../types";
 import { supabase } from "../../integrations/supabase/client";
-import { currentQueue, updateStoredQueue, notifySubscribers } from "./storage";
+import { getCurrentQueue, setCurrentQueue } from "./storage";
 
 // Add a customer to the waiting queue
 export const addCustomer = async (customer: Customer): Promise<void> => {
-  currentQueue = {
+  const currentQueue = getCurrentQueue();
+  
+  setCurrentQueue({
     ...currentQueue,
     customers: [...currentQueue.customers, customer],
-  };
-  
-  updateStoredQueue(currentQueue);
-  notifySubscribers();
+  });
   
   try {
     // Try to sync with Supabase if available
@@ -36,6 +35,7 @@ export const addCustomer = async (customer: Customer): Promise<void> => {
 
 // Update a customer's status in the waiting queue
 export const updateCustomerStatus = async (id: string, status: "waiting" | "called" | "seated" | "left"): Promise<Customer> => {
+  const currentQueue = getCurrentQueue();
   const customerIndex = currentQueue.customers.findIndex((c) => c.id === id);
   
   if (customerIndex === -1) throw new Error("Customer not found");
@@ -48,14 +48,11 @@ export const updateCustomerStatus = async (id: string, status: "waiting" | "call
   
   const updatedCustomer = updatedCustomers[customerIndex];
   
-  currentQueue = {
+  setCurrentQueue({
     ...currentQueue,
     customers: updatedCustomers,
     currentlyServing: status === "called" ? updatedCustomer : currentQueue.currentlyServing,
-  };
-  
-  updateStoredQueue(currentQueue);
-  notifySubscribers();
+  });
   
   try {
     // Try to sync with Supabase if available
@@ -75,6 +72,7 @@ export const updateCustomerStatus = async (id: string, status: "waiting" | "call
 
 // Call a customer from the waiting queue
 export const callCustomer = async (id: string): Promise<void> => {
+  const currentQueue = getCurrentQueue();
   const customerIndex = currentQueue.customers.findIndex((c) => c.id === id);
   
   if (customerIndex === -1) return;
@@ -85,14 +83,11 @@ export const callCustomer = async (id: string): Promise<void> => {
     status: "called",
   };
   
-  currentQueue = {
+  setCurrentQueue({
     ...currentQueue,
     customers: updatedCustomers,
     currentlyServing: updatedCustomers[customerIndex],
-  };
-  
-  updateStoredQueue(currentQueue);
-  notifySubscribers();
+  });
   
   try {
     // Try to sync with Supabase if available
@@ -110,14 +105,13 @@ export const callCustomer = async (id: string): Promise<void> => {
 
 // Remove a customer from the waiting queue
 export const removeCustomer = async (id: string): Promise<void> => {
-  currentQueue = {
+  const currentQueue = getCurrentQueue();
+  
+  setCurrentQueue({
     ...currentQueue,
     customers: currentQueue.customers.filter((c) => c.id !== id),
     currentlyServing: currentQueue.currentlyServing?.id === id ? null : currentQueue.currentlyServing,
-  };
-  
-  updateStoredQueue(currentQueue);
-  notifySubscribers();
+  });
   
   try {
     // Try to sync with Supabase if available

@@ -1,7 +1,7 @@
 
 import { supabase } from "../../integrations/supabase/client";
 import { Customer } from "../../types";
-import { currentQueue, updateStoredQueue, notifySubscribers } from "./storage";
+import { getCurrentQueue, setCurrentQueue } from "./storage";
 
 // Fetch the latest queue data from the database
 export const fetchQueueFromDatabase = async () => {
@@ -25,13 +25,11 @@ export const fetchQueueFromDatabase = async () => {
         priority: item.preferences.pregnant || item.preferences.elderly || item.preferences.disabled || item.preferences.infant,
       }));
       
-      currentQueue = {
+      const currentQueue = getCurrentQueue();
+      setCurrentQueue({
         ...currentQueue,
         customers,
-      };
-      
-      updateStoredQueue(currentQueue);
-      notifySubscribers();
+      });
     }
   } catch (error) {
     console.warn("Failed to fetch from database, using local storage instead", error);

@@ -13,10 +13,22 @@ export const updateStoredQueue = (queue: WaitingQueueState) => {
 };
 
 // In-memory state for real-time updates
-export let currentQueue = getStoredQueue();
+let currentQueueState = getStoredQueue();
 export const subscribers: ((state: WaitingQueueState) => void)[] = [];
+
+// Get the current queue state
+export const getCurrentQueue = (): WaitingQueueState => {
+  return { ...currentQueueState };
+};
+
+// Update the current queue state
+export const setCurrentQueue = (queue: WaitingQueueState): void => {
+  currentQueueState = { ...queue };
+  updateStoredQueue(currentQueueState);
+  notifySubscribers();
+};
 
 // Notify all subscribers of state changes
 export const notifySubscribers = () => {
-  subscribers.forEach((callback) => callback({ ...currentQueue }));
+  subscribers.forEach((callback) => callback({ ...currentQueueState }));
 };

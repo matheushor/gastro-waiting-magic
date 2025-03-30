@@ -1,7 +1,7 @@
 
 import { supabase } from "../../integrations/supabase/client";
 import { WaitingQueueState } from "../../types";
-import { currentQueue, subscribers } from "./storage";
+import { getCurrentQueue, subscribers } from "./storage";
 import { fetchQueueFromDatabase } from "./database";
 
 // Subscribe to queue changes
@@ -9,7 +9,7 @@ export const subscribeToQueueChanges = (
   callback: (state: WaitingQueueState) => void
 ) => {
   subscribers.push(callback);
-  callback({ ...currentQueue });
+  callback({ ...getCurrentQueue() });
   
   // Use a fallback approach that doesn't depend on WebSockets
   let supbaseSubscriptionActive = false;
@@ -23,7 +23,7 @@ export const subscribeToQueueChanges = (
           .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'waiting_customers' }, (payload) => {
             fetchQueueFromDatabase();
           })
-          .subscribe((status) => {
+          .subscribe((status: any) => {
             if (status === 'SUBSCRIBED') {
               supbaseSubscriptionActive = true;
               fetchQueueFromDatabase(); // Initial fetch when subscription is successful
@@ -54,7 +54,7 @@ export const subscribeToQueueChanges = (
   // If we reach here, we're using local updates only
   // Set up a polling mechanism as a fallback
   const pollingInterval = setInterval(() => {
-    callback({ ...currentQueue });
+    callback({ ...getCurrentQueue() });
   }, 5000);
   
   // Return unsubscribe function for local updates
