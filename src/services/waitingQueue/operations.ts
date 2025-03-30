@@ -16,15 +16,15 @@ export const addCustomer = async (customer: Customer): Promise<void> => {
     // Try to sync with Supabase if available
     const { error } = await supabase
       .from("waiting_customers")
-      .insert([{
+      .insert({
         id: customer.id,
         name: customer.name,
         phone: customer.phone,
         party_size: customer.partySize,
-        preferences: customer.preferences,
+        preferences: customer.preferences as any, // Required type assertion for Supabase
         status: customer.status,
         timestamp: customer.timestamp,
-      }]);
+      });
       
     if (error) throw error;
     
