@@ -66,9 +66,17 @@ export default defineConfig(({ mode }) => ({
     target: 'es2020',
   },
   plugins: [
-    react(),
-    mode === 'development' &&
-    componentTagger(),
+    react({
+      // Include these options to help with JSX processing
+      babel: {
+        plugins: [
+          ['@babel/plugin-transform-react-jsx', { runtime: 'automatic' }]
+        ]
+      },
+      // Add fast refresh
+      fastRefresh: true,
+    }),
+    mode === 'development' && componentTagger(),
   ].filter(Boolean),
   resolve: {
     alias: {

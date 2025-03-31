@@ -24,17 +24,20 @@ const CustomerListTab: React.FC<CustomerListTabProps> = ({
   emptyMessage,
   isMobile
 }) => {
+  // Make sure we have a valid customers array to prevent rendering issues
+  const validCustomers = Array.isArray(customers) ? customers : [];
+  
   return (
     <div>
       <h2 className="text-xl font-bold text-gastro-blue mb-3">{title}</h2>
       
-      {customers.length === 0 ? (
+      {validCustomers.length === 0 ? (
         <div className="bg-white p-6 rounded-lg shadow-md text-center">
           <p className="text-gastro-gray">{emptyMessage}</p>
         </div>
       ) : (
         <div className="grid gap-4">
-          {customers.map((customer, index) => (
+          {validCustomers.map((customer, index) => (
             <CustomerCard 
               key={customer.id} 
               customer={customer} 
