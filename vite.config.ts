@@ -22,7 +22,11 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     exclude: ["uuid"], // Explicitly exclude uuid to prevent it from being processed
-    include: ["react", "react-dom", "recharts", "d3-scale", "d3-shape"], // Include critical dependencies
+    include: ["react", "react-dom"], // Include critical dependencies but exclude problematic ones
+    esbuildOptions: {
+      // Ensure TypeScript is processed correctly
+      tsconfig: './tsconfig.json',
+    },
   },
   build: {
     outDir: "dist",
@@ -30,6 +34,7 @@ export default defineConfig(({ mode }) => ({
       // Make sure to exclude problematic dependencies
       external: ["uuid"],
     },
+    sourcemap: true,
   },
   esbuild: {
     logOverride: { 'this-is-undefined-in-esm': 'silent' }
