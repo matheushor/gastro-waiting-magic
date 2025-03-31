@@ -42,17 +42,20 @@ export const updateCustomerStatusInDatabase = async (id: string, status: 'waitin
       customers: updatedCustomers,
     });
     
-    // Transform to our Customer type
+    // Transform to our Customer type with proper type casting for preferences
+    const customerPreferences = data.preferences as unknown as Customer['preferences'];
+    
     return {
       id: data.id,
       name: data.name,
       phone: data.phone,
       partySize: data.party_size,
-      preferences: data.preferences,
+      preferences: customerPreferences,
       timestamp: data.timestamp,
       status: data.status as 'waiting' | 'called' | 'seated',
       calledAt: data.called_at ? new Date(data.called_at).getTime() : undefined,
-      priority: data.preferences.pregnant || data.preferences.elderly || data.preferences.disabled || data.preferences.infant,
+      priority: customerPreferences.pregnant || customerPreferences.elderly || 
+               customerPreferences.disabled || customerPreferences.infant,
     };
   } catch (error) {
     console.error("Error updating customer in database:", error);

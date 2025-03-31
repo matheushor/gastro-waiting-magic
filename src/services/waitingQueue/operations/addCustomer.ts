@@ -2,6 +2,7 @@
 import { Customer } from "../../../types";
 import { supabase } from "../../../integrations/supabase/client";
 import { getCurrentQueue, setCurrentQueue } from "../storage";
+import { Json } from "../../../integrations/supabase/types";
 
 // Add customer to the database
 export const addCustomerToDatabase = async (customer: Customer): Promise<Customer> => {
@@ -15,7 +16,7 @@ export const addCustomerToDatabase = async (customer: Customer): Promise<Custome
       preferences: customer.preferences,
       timestamp: customer.timestamp,
       status: customer.status,
-      called_at: customer.calledAt,
+      called_at: customer.calledAt ? new Date(customer.calledAt).toISOString() : null, // Convert to ISO string
     };
     
     // Insert the customer into Supabase
