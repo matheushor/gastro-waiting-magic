@@ -1,6 +1,6 @@
 
 import { supabase } from "../../../integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 /**
  * Remove a customer from the waiting queue
@@ -18,25 +18,14 @@ export async function removeCustomer(id: string): Promise<void> {
 
     if (error) {
       console.error("Error removing customer:", error);
-      toast({
-        title: "Error",
-        description: "Failed to remove customer from queue",
-        variant: "destructive",
-      });
+      toast.error("Failed to remove customer from queue");
       throw error;
     }
     
-    toast({
-      title: "Success",
-      description: "Customer removed from queue",
-    });
+    toast.success("Customer removed from queue");
   } catch (error) {
     console.error("Failed to remove customer:", error);
-    toast({
-      title: "Error",
-      description: "Failed to remove customer from queue",
-      variant: "destructive",
-    });
+    toast.error("Failed to remove customer from queue");
     throw error;
   }
 }
