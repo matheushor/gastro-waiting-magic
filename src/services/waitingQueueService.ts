@@ -2,7 +2,8 @@
 import { WaitingQueueState, Customer } from "@/types";
 import {
   fetchQueueFromDatabase,
-  recordDailyStatistics
+  recordDailyStatistics,
+  fetchDailyStatistics
 } from "./waitingQueue/database";
 import {
   getCurrentQueue,
@@ -24,7 +25,9 @@ export {
   setCurrentQueue,
   subscribeToQueueChanges,
   calculateAverageWaitTime,
-  fetchQueueFromDatabase
+  fetchQueueFromDatabase,
+  fetchDailyStatistics,
+  updateCustomerStatus
 };
 
 // Add a customer to the waiting queue

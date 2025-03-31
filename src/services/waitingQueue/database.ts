@@ -50,7 +50,10 @@ export const recordDailyStatistics = async (partySize: number): Promise<void> =>
       .eq("date", today)
       .maybeSingle();
     
-    if (fetchError) throw fetchError;
+    if (fetchError) {
+      console.warn("Failed to fetch daily statistics", fetchError);
+      return;
+    }
     
     if (existingData) {
       // Update existing record
@@ -62,7 +65,9 @@ export const recordDailyStatistics = async (partySize: number): Promise<void> =>
         })
         .eq("date", today);
         
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.warn("Failed to update daily statistics", updateError);
+      }
     } else {
       // Create new record for today
       const { error: insertError } = await supabase
@@ -73,7 +78,9 @@ export const recordDailyStatistics = async (partySize: number): Promise<void> =>
           people_count: partySize
         });
         
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.warn("Failed to record daily statistics", insertError);
+      }
     }
   } catch (error) {
     console.warn("Failed to record daily statistics", error);
@@ -90,7 +97,10 @@ export const fetchDailyStatistics = async (): Promise<DailyStatistics[]> => {
       .order("date", { ascending: false })
       .limit(30);
       
-    if (error) throw error;
+    if (error) {
+      console.warn("Failed to fetch daily statistics", error);
+      return [];
+    }
     
     return data || [];
   } catch (error) {
