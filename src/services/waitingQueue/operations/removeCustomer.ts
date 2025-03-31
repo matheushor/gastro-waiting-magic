@@ -18,10 +18,25 @@ export async function removeCustomer(id: string): Promise<void> {
 
     if (error) {
       console.error("Error removing customer:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove customer from queue",
+        variant: "destructive",
+      });
       throw error;
     }
+    
+    toast({
+      title: "Success",
+      description: "Customer removed from queue",
+    });
   } catch (error) {
     console.error("Failed to remove customer:", error);
+    toast({
+      title: "Error",
+      description: "Failed to remove customer from queue",
+      variant: "destructive",
+    });
     throw error;
   }
 }
