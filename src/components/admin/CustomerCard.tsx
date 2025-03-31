@@ -21,8 +21,8 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
   onRemove, 
   onEdit,
   onFinishServing, 
-  isPriority,
-  isMobile 
+  isPriority = false,
+  isMobile = false
 }) => {
   const { preferences } = customer;
   const activePreferences = [];

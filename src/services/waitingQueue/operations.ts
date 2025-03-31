@@ -1,4 +1,3 @@
-
 import { Customer } from "../../types";
 import { supabase } from "../../integrations/supabase/client";
 import { getCurrentQueue, setCurrentQueue } from "./storage";
@@ -189,6 +188,8 @@ export const updateCustomer = async (customer: Customer): Promise<void> => {
 
 // Calculate average waiting time based on historical data
 export const calculateAverageWaitTime = (customers: Customer[]): number | null => {
+  if (!Array.isArray(customers) || customers.length === 0) return null;
+  
   // Find customers that were called and have both entry timestamp and call timestamp
   const completedWaits = customers.filter(c => 
     c.status === "called" && c.timestamp && c.calledAt
@@ -197,7 +198,13 @@ export const calculateAverageWaitTime = (customers: Customer[]): number | null =
   if (completedWaits.length === 0) return null;
   
   // Calculate the actual waiting time for each group (difference between call time and entry time)
-  const waitTimes = completedWaits.map(c => (c.calledAt || 0) - c.timestamp);
+  const waitTimes = completedWaits.map(c => {
+    const calledTime = c.calledAt || 0;
+    const entryTime = c.timestamp || 0;
+    return calledTime > entryTime ? calledTime - entryTime : 0;
+  }).filter(time => time > 0);
+  
+  if (waitTimes.length === 0) return null;
   
   // Get the total waiting time
   const totalWaitTime = waitTimes.reduce((sum, time) => sum + time, 0);

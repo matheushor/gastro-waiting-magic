@@ -33,6 +33,10 @@ export {
 
 // Add a customer to the waiting queue
 export const addCustomer = async (customer: Customer): Promise<void> => {
+  if (!customer) {
+    throw new Error("Customer data is required");
+  }
+  
   // Ensure customer has an ID
   if (!customer.id) {
     customer.id = crypto.randomUUID();
@@ -48,6 +52,10 @@ export const addCustomer = async (customer: Customer): Promise<void> => {
 
 // Remove a customer from the waiting queue
 export const removeCustomer = async (id: string): Promise<void> => {
+  if (!id) {
+    throw new Error("Customer ID is required");
+  }
+  
   try {
     await removeCustomerFromQueue(id);
   } catch (error) {
@@ -58,6 +66,10 @@ export const removeCustomer = async (id: string): Promise<void> => {
 
 // Call a customer from the waiting queue
 export const callCustomer = async (id: string): Promise<void> => {
+  if (!id) {
+    throw new Error("Customer ID is required");
+  }
+  
   try {
     await callCustomerFromQueue(id);
   } catch (error) {
@@ -68,6 +80,10 @@ export const callCustomer = async (id: string): Promise<void> => {
 
 // Update customer information in the waiting queue
 export const updateCustomer = async (customer: Customer): Promise<void> => {
+  if (!customer || !customer.id) {
+    throw new Error("Valid customer data with ID is required");
+  }
+  
   try {
     await updateCustomerInQueue(customer);
   } catch (error) {

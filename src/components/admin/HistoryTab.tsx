@@ -10,7 +10,7 @@ interface HistoryTabProps {
   isMobile: boolean;
 }
 
-const HistoryTab: React.FC<HistoryTabProps> = ({
+const HistoryTab: React.FC<HistoryTabProps> = ({ 
   dailyStats,
   queueCounts,
   realAvgWaitTime,
@@ -57,92 +57,52 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
         
         <div className="relative h-40">
           {queueCounts.length > 0 ? (
-            <svg className="w-full h-full" viewBox={`0 0 ${queueCounts.length * 15} 100`} preserveAspectRatio="none">
-              <line 
-                x1="0" 
-                y1="90" 
-                x2={queueCounts.length * 15} 
-                y2="90" 
-                stroke="#ddd" 
-                strokeWidth="1" 
-              />
-              {[...Array(5)].map((_, i) => (
-                <line 
-                  key={i}
-                  x1="0" 
-                  y1={90 - (i+1) * 15} 
-                  x2={queueCounts.length * 15} 
-                  y2={90 - (i+1) * 15} 
-                  stroke="#eee" 
-                  strokeWidth="1" 
-                />
-              ))}
-              <polyline 
-                points={queueCounts.map((point, index) => 
-                  `${index * 15}, ${Math.max(10, 90 - point.count * 10)}`
-                ).join(' ')} 
-                fill="none" 
-                stroke="#3B82F6" 
-                strokeWidth="2" 
-              />
-              {queueCounts.map((point, index) => (
-                <circle 
-                  key={index}
-                  cx={index * 15} 
-                  cy={Math.max(10, 90 - point.count * 10)} 
-                  r="3" 
-                  fill="#3B82F6" 
-                />
-              ))}
-            </svg>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gastro-gray">
-              Sem dados disponíveis
+            <div className="absolute inset-0 flex items-end justify-between">
+              {queueCounts.map((item, index) => {
+                const height = item.count > 0 ? (item.count / Math.max(...queueCounts.map(i => i.count)) * 100) : 0;
+                return (
+                  <div key={index} className="flex flex-col items-center">
+                    <div 
+                      className="w-8 bg-gastro-blue rounded-t"
+                      style={{ height: `${height}%`, minHeight: item.count > 0 ? '10%' : '0' }}
+                    ></div>
+                    <div className="text-xs text-gastro-gray mt-1 w-10 text-center overflow-hidden text-ellipsis">
+                      {item.time}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          )}
-        </div>
-        <div className="flex justify-between mt-2 text-xs text-gastro-gray">
-          {queueCounts.length > 0 && (
-            <>
-              <div>{queueCounts[0].time}</div>
-              {queueCounts.length > 1 && (
-                <div>{queueCounts[queueCounts.length - 1].time}</div>
-              )}
-            </>
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-gastro-gray">Sem dados para exibir</p>
+            </div>
           )}
         </div>
       </div>
       
-      <h3 className="font-semibold text-gastro-blue my-3">Histórico dos Últimos Dias</h3>
-      
-      {dailyStats.length === 0 ? (
-        <div className="bg-white p-6 rounded-lg shadow-md text-center">
-          <p className="text-gastro-gray">Nenhuma estatística disponível.</p>
+      <div className="bg-white p-4 rounded-lg shadow-md">
+        <h3 className="font-semibold text-gastro-blue mb-3">Últimos 7 Dias</h3>
+        <div className="space-y-4">
+          {dailyStats.slice(0, 7).map((stat, index) => (
+            <div key={index} className="flex justify-between items-center p-2 border-b">
+              <div className="text-gastro-gray">
+                {new Date(stat.date).toLocaleDateString('pt-BR')}
+              </div>
+              <div className="flex items-center">
+                <span className="text-gastro-blue font-semibold">{stat.groups_count} grupos</span>
+                <span className="text-gastro-gray text-sm ml-2">({stat.people_count} pessoas)</span>
+              </div>
+            </div>
+          ))}
+          
+          {dailyStats.length === 0 && (
+            <div className="text-center p-4">
+              <p className="text-gastro-gray">Sem histórico disponível</p>
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="bg-white p-4 rounded-lg shadow-md">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead>
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gastro-gray uppercase tracking-wider">Data</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gastro-gray uppercase tracking-wider">Grupos</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gastro-gray uppercase tracking-wider">Pessoas</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {dailyStats.map((stat, index) => (
-                  <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-blue-50'}>
-                    <td className="px-4 py-2 text-sm text-gastro-gray">{new Date(stat.date).toLocaleDateString('pt-BR')}</td>
-                    <td className="px-4 py-2 text-sm font-medium text-gastro-blue">{stat.groups_count}</td>
-                    <td className="px-4 py-2 text-sm text-gastro-gray">{stat.people_count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 };

@@ -17,6 +17,7 @@ const Index = () => {
   const [userPhoneNumber, setUserPhoneNumber] = useState<string>(() => {
     return localStorage.getItem('userPhoneNumber') || '';
   });
+  const [error, setError] = useState<string | null>(null);
   const isMobile = useIsMobile();
   
   // Identificação do usuário pelo número de telefone (simulando autenticação)
@@ -27,33 +28,42 @@ const Index = () => {
   }, [userPhoneNumber]);
   
   useEffect(() => {
-    const unsubscribe = subscribeToQueueChanges((newState) => {
-      setQueueState(newState);
-      
-      // Verificar se existe algum cliente chamado com o número de telefone do usuário atual
-      if (userPhoneNumber) {
-        const userCalled = newState.customers.find(c => 
-          c.status === 'called' && c.phone === userPhoneNumber
-        );
+    try {
+      const unsubscribe = subscribeToQueueChanges((newState) => {
+        setQueueState(newState);
         
-        if (userCalled && (!calledCustomer || userCalled.id !== calledCustomer.id)) {
-          setCalledCustomer(userCalled);
-          
-          // Enviar notificação apenas para este usuário
-          toast(
-            <div className="flex items-center gap-2">
-              <Bell className="h-5 w-5 text-gastro-orange" />
-              <div>
-                <p className="font-bold">Sua vez chegou!</p>
-                <p className="text-sm">Você foi chamado para sua mesa.</p>
-              </div>
-            </div>
+        // Verificar se existe algum cliente chamado com o número de telefone do usuário atual
+        if (userPhoneNumber) {
+          const userCalled = newState.customers.find(c => 
+            c.status === 'called' && c.phone === userPhoneNumber
           );
+          
+          if (userCalled && (!calledCustomer || userCalled.id !== calledCustomer.id)) {
+            setCalledCustomer(userCalled);
+            
+            // Enviar notificação apenas para este usuário
+            toast(
+              <div className="flex items-center gap-2">
+                <Bell className="h-5 w-5 text-gastro-orange" />
+                <div>
+                  <p className="font-bold">Sua vez chegou!</p>
+                  <p className="text-sm">Você foi chamado para sua mesa.</p>
+                </div>
+              </div>
+            );
+          }
         }
-      }
-    });
-    
-    return () => unsubscribe();
+      });
+      
+      return () => {
+        if (typeof unsubscribe === 'function') {
+          unsubscribe();
+        }
+      };
+    } catch (error) {
+      console.error("Error subscribing to queue changes:", error);
+      setError("Erro ao carregar a fila. Por favor, atualize a página.");
+    }
   }, [calledCustomer, userPhoneNumber]);
 
   const handleCustomerRegistration = async (newCustomer: Customer) => {
@@ -116,6 +126,28 @@ const Index = () => {
     }
   };
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-8 px-4 flex items-center justify-center">
+        <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full text-center">
+          <div className="text-red-500 mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gastro-blue mb-2">Oops! Algo deu errado</h2>
+          <p className="text-gastro-gray mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-gastro-blue text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-8 px-4 relative">
       <div className={`mx-auto mb-8 ${isMobile ? 'max-w-full' : 'max-w-md'}`}>
@@ -147,7 +179,7 @@ const Index = () => {
         
         <TabsContent value="waitingList" className="animate-scale-in">
           <WaitingList 
-            customers={queueState.customers} 
+            customers={queueState.customers || []} 
             onLeaveQueue={handleLeaveQueue}
             userPhoneNumber={userPhoneNumber}
           />
@@ -159,13 +191,13 @@ const Index = () => {
       </Tabs>
 
       <div className="mt-8 text-center">
-        <a 
-          href="/admin" 
+        <Link 
+          to="/admin" 
           className="inline-flex items-center text-gastro-blue hover:text-gastro-orange transition-colors bg-white px-4 py-2 rounded-full shadow-sm border border-blue-100"
         >
           <BellRing className="h-4 w-4 mr-2" />
           Acesso do Administrador
-        </a>
+        </Link>
       </div>
 
       {calledCustomer && (

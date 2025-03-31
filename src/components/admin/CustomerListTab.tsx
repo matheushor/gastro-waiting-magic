@@ -20,9 +20,9 @@ const CustomerListTab: React.FC<CustomerListTabProps> = ({
   onEdit,
   onRemove,
   onFinishServing,
-  isPriority,
+  isPriority = false,
   emptyMessage,
-  isMobile
+  isMobile = false
 }) => {
   // Make sure we have a valid customers array to prevent rendering issues
   const validCustomers = Array.isArray(customers) ? customers : [];
