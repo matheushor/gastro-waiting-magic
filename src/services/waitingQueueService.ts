@@ -1,14 +1,18 @@
 
 // Re-export all functionality from the modular files
-import { addCustomer, updateCustomerStatus, callCustomer, removeCustomer } from "./waitingQueue/operations";
+import { addCustomer, updateCustomerStatus, callCustomer, removeCustomer, updateCustomer, calculateAverageWaitTime } from "./waitingQueue/operations";
 import { subscribeToQueueChanges } from "./waitingQueue/subscription";
-import { fetchQueueFromDatabase } from "./waitingQueue/database";
+import { fetchQueueFromDatabase, recordDailyStatistics, fetchDailyStatistics } from "./waitingQueue/database";
 
 export {
   addCustomer,
   updateCustomerStatus,
   callCustomer,
   removeCustomer,
+  updateCustomer,
   subscribeToQueueChanges,
-  fetchQueueFromDatabase
+  fetchQueueFromDatabase,
+  recordDailyStatistics,
+  fetchDailyStatistics,
+  calculateAverageWaitTime
 };

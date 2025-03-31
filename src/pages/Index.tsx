@@ -13,39 +13,51 @@ import { Link } from "react-router-dom";
 const Index = () => {
   const [queueState, setQueueState] = useState<WaitingQueueState>({ customers: [], currentlyServing: null });
   const [calledCustomer, setCalledCustomer] = useState<Customer | null>(null);
+  const [userPhoneNumber, setUserPhoneNumber] = useState<string>(() => {
+    return localStorage.getItem('userPhoneNumber') || '';
+  });
+  
+  // Identificação do usuário pelo número de telefone (simulando autenticação)
+  useEffect(() => {
+    if (userPhoneNumber) {
+      localStorage.setItem('userPhoneNumber', userPhoneNumber);
+    }
+  }, [userPhoneNumber]);
   
   useEffect(() => {
     const unsubscribe = subscribeToQueueChanges((newState) => {
       setQueueState(newState);
       
-      const newCalled = newState.customers.find(c => 
-        c.status === 'called' && 
-        (!calledCustomer || c.id !== calledCustomer.id)
-      );
-      
-      if (newCalled && !calledCustomer) {
-        // Verificar se este cliente é o que está sendo visualizado atualmente
-        // Isso é apenas uma simulação - na realidade, você precisaria de um sistema
-        // de autenticação ou identificação para saber qual cliente está visualizando
-        setCalledCustomer(newCalled);
-        
-        toast(
-          <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-gastro-orange" />
-            <div>
-              <p className="font-bold">Cliente chamado!</p>
-              <p className="text-sm">Cliente {newCalled.name} foi chamado.</p>
-            </div>
-          </div>
+      // Verificar se existe algum cliente chamado com o número de telefone do usuário atual
+      if (userPhoneNumber) {
+        const userCalled = newState.customers.find(c => 
+          c.status === 'called' && c.phone === userPhoneNumber
         );
+        
+        if (userCalled && (!calledCustomer || userCalled.id !== calledCustomer.id)) {
+          setCalledCustomer(userCalled);
+          
+          toast(
+            <div className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-gastro-orange" />
+              <div>
+                <p className="font-bold">Sua vez chegou!</p>
+                <p className="text-sm">Você foi chamado para sua mesa.</p>
+              </div>
+            </div>
+          );
+        }
       }
     });
     
     return () => unsubscribe();
-  }, [calledCustomer]);
+  }, [calledCustomer, userPhoneNumber]);
 
   const handleCustomerRegistration = async (newCustomer: Customer) => {
     try {
+      // Salvar o número de telefone para identificação do usuário
+      setUserPhoneNumber(newCustomer.phone);
+      
       await addCustomer(newCustomer);
       toast.success("Cadastro realizado com sucesso!");
     } catch (error) {
@@ -133,7 +145,8 @@ const Index = () => {
         <TabsContent value="waitingList" className="animate-scale-in">
           <WaitingList 
             customers={queueState.customers} 
-            onLeaveQueue={handleLeaveQueue} 
+            onLeaveQueue={handleLeaveQueue}
+            userPhoneNumber={userPhoneNumber}
           />
         </TabsContent>
         
