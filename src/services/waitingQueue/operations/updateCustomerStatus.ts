@@ -2,22 +2,24 @@
 import { Customer } from "../../../types";
 import { supabase } from "../../../integrations/supabase/client";
 import { getCurrentQueue, setCurrentQueue } from "../storage";
+import { Json } from "../../../integrations/supabase/types";
 
-// Update customer status in the database
-export const updateCustomerStatusInDatabase = async (id: string, status: 'waiting' | 'called' | 'seated'): Promise<Customer> => {
+// Update a customer's status in the database
+export const updateCustomerStatusInDatabase = async (
+  id: string,
+  status: 'waiting' | 'called' | 'seated'
+): Promise<Customer> => {
   try {
-    const updates: any = {
-      status,
-    };
+    // Current timestamp for when a customer is called
+    const calledAt = status === 'called' ? new Date().toISOString() : null;
     
-    // If status is 'called', update the called_at timestamp
-    if (status === 'called') {
-      updates.called_at = new Date().toISOString();
-    }
-    
+    // Update the customer in Supabase
     const { data, error } = await supabase
       .from("waiting_customers")
-      .update(updates)
+      .update({
+        status,
+        called_at: calledAt,
+      })
       .eq("id", id)
       .select("*")
       .single();
@@ -26,39 +28,28 @@ export const updateCustomerStatusInDatabase = async (id: string, status: 'waitin
     
     // Update our local state
     const queue = getCurrentQueue();
-    const updatedCustomers = queue.customers.map(c => {
-      if (c.id === id) {
-        return {
-          ...c,
-          status,
-          calledAt: status === 'called' ? new Date().getTime() : c.calledAt,
-        };
-      }
-      return c;
-    });
-    
-    setCurrentQueue({
-      ...queue,
-      customers: updatedCustomers,
-    });
-    
-    // Transform to our Customer type with proper type casting for preferences
-    const customerPreferences = data.preferences as unknown as Customer['preferences'];
-    
-    return {
+    const updatedCustomer: Customer = {
       id: data.id,
       name: data.name,
       phone: data.phone,
       partySize: data.party_size,
-      preferences: customerPreferences,
+      preferences: data.preferences as unknown as Customer['preferences'],
       timestamp: data.timestamp,
-      status: data.status as 'waiting' | 'called' | 'seated',
+      status: data.status as 'waiting' | 'called' | 'seated' | 'left',
       calledAt: data.called_at ? new Date(data.called_at).getTime() : undefined,
-      priority: customerPreferences.pregnant || customerPreferences.elderly || 
-               customerPreferences.disabled || customerPreferences.infant,
+      priority: (data.preferences as any)?.pregnant || (data.preferences as any)?.elderly || 
+               (data.preferences as any)?.disabled || (data.preferences as any)?.infant,
     };
+    
+    setCurrentQueue({
+      ...queue,
+      customers: queue.customers.map(c => c.id === id ? updatedCustomer : c),
+      currentlyServing: status === 'called' ? updatedCustomer : queue.currentlyServing,
+    });
+    
+    return updatedCustomer;
   } catch (error) {
-    console.error("Error updating customer in database:", error);
+    console.error("Error updating customer status in database:", error);
     throw error;
   }
 };

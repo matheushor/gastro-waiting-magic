@@ -13,7 +13,7 @@ export const addCustomerToDatabase = async (customer: Customer): Promise<Custome
       name: customer.name,
       phone: customer.phone,
       party_size: customer.partySize,
-      preferences: customer.preferences,
+      preferences: customer.preferences as unknown as Json,
       timestamp: customer.timestamp,
       status: customer.status,
       called_at: customer.calledAt ? new Date(customer.calledAt).toISOString() : null, // Convert to ISO string
