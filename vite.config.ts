@@ -23,7 +23,24 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     force: true, // Force dependency optimization
     exclude: ["uuid"], // Explicitly exclude uuid to prevent it from being processed
-    include: ["react", "react-dom", "d3-scale", "d3-shape"], // Include problematic dependencies but don't include recharts here
+    include: [
+      "react", 
+      "react-dom", 
+      "class-variance-authority",
+      "clsx",
+      "tailwind-merge",
+      "recharts",
+      "@radix-ui/react-toast",
+      "@radix-ui/react-accordion",
+      "@radix-ui/react-aspect-ratio",
+      "@radix-ui/react-slot"
+    ],
+    esbuildOptions: {
+      // Node.js global to browser globalThis
+      define: {
+        global: 'globalThis',
+      },
+    },
   },
   build: {
     outDir: "dist",
