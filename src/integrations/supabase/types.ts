@@ -9,30 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      daily_statistics: {
-        Row: {
-          created_at: string | null
-          date: string
-          groups_count: number
-          id: string
-          people_count: number
-        }
-        Insert: {
-          created_at?: string | null
-          date: string
-          groups_count?: number
-          id?: string
-          people_count?: number
-        }
-        Update: {
-          created_at?: string | null
-          date?: string
-          groups_count?: number
-          id?: string
-          people_count?: number
-        }
-        Relationships: []
-      }
       waiting_customers: {
         Row: {
           called_at: string | null
