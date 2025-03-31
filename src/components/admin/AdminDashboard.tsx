@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState } from "react";
 import { Customer, DailyStatistics } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BellRing, Users, Clock, LogOut, UserCheck, X, History, Star, User, Coffee, UserPlus, Edit, BarChart } from "lucide-react";
+import { BellRing, Users, Clock, LogOut, UserCheck, X, History, Star, Coffee, UserPlus, Edit, BarChart } from "lucide-react";
 import { formatWaitingTime } from "@/utils/geoUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import AdminRegistrationForm from "./AdminRegistrationForm";
 import EditCustomerDialog from "./EditCustomerDialog";
-import { fetchDailyStatistics } from "@/services/waitingQueue/database";
 import { calculateAverageWaitTime } from "@/services/waitingQueue/operations";
 
 interface AdminDashboardProps {
@@ -25,6 +25,8 @@ interface AdminDashboardProps {
   queueCounts: {time: string, count: number}[];
   avgWaitTime: number | null;
   onRegisterCustomer: (customer: Customer) => void;
+  dailyStats: DailyStatistics[];
+  isMobile: boolean;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -41,22 +43,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   queueCounts,
   avgWaitTime,
   onRegisterCustomer,
+  dailyStats,
+  isMobile,
 }) => {
   const [confirmDialog, setConfirmDialog] = useState(false);
   const [customerToRemove, setCustomerToRemove] = useState<Customer | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [customerToEdit, setCustomerToEdit] = useState<Customer | null>(null);
-  const [dailyStats, setDailyStats] = useState<DailyStatistics[]>([]);
-
-  useEffect(() => {
-    if (activeTab === 'history') {
-      const getDailyStats = async () => {
-        const stats = await fetchDailyStatistics();
-        setDailyStats(stats);
-      };
-      getDailyStats();
-    }
-  }, [activeTab]);
 
   const waitingCount = customers.filter(c => c.status === "waiting").length;
 
@@ -106,7 +99,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (preferences.infant) activePreferences.push("Criança de colo");
     if (preferences.withDog) activePreferences.push("Com cachorro");
     if (preferences.indoor) activePreferences.push("Mesa interna");
-    else activePreferences.push("Mesa externa");
+    if (preferences.outdoor) activePreferences.push("Mesa externa");
     
     return activePreferences.map((pref, index) => (
       <span key={index} className="preference-tag">
@@ -120,7 +113,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   return (
-    <div className="mx-auto max-w-4xl p-4">
+    <div className={`mx-auto p-4 ${isMobile ? 'max-w-full' : 'max-w-4xl'}`}>
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gastro-blue">Painel Administrativo</h1>
@@ -132,7 +125,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className={`grid gap-4 mb-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
         <div className="bg-gastro-blue text-white p-6 rounded-lg shadow-md flex items-center">
           <Users className="h-10 w-10 mr-4" />
           <div>
@@ -170,10 +163,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             Cliente Atual
           </h2>
           <div className="bg-orange-50 border border-gastro-orange p-4 rounded-lg">
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between items-start flex-wrap gap-2">
               <div>
                 <h3 className="font-semibold text-lg">{currentlyServing.name}</h3>
-                <div className="flex items-center text-sm text-gastro-gray">
+                <div className="flex items-center text-sm text-gastro-gray flex-wrap">
                   <span className="mr-2">{currentlyServing.partySize} {currentlyServing.partySize > 1 ? 'pessoas' : 'pessoa'}</span>
                   •
                   <span className="ml-2">Tel: {currentlyServing.phone}</span>
@@ -182,7 +175,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   {renderPreferences(currentlyServing)}
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -217,7 +210,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       <Tabs defaultValue="waiting" value={activeTab} onValueChange={(val) => onChangeTab(val as any)}>
-        <TabsList className="grid grid-cols-5 mb-4 overflow-x-auto flex-nowrap">
+        <TabsList className={`grid mb-4 overflow-x-auto flex-nowrap ${isMobile ? 'grid-cols-3' : 'grid-cols-5'}`}>
           <TabsTrigger value="waiting" className="flex items-center gap-1">
             <Users className="h-4 w-4" />
             <span>Aguardando</span>
@@ -230,15 +223,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <Star className="h-4 w-4" />
             <span>Prioritários</span>
           </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center gap-1">
-            <History className="h-4 w-4" />
-            <span>Histórico</span>
-          </TabsTrigger>
-          <TabsTrigger value="register" className="flex items-center gap-1">
-            <UserPlus className="h-4 w-4" />
-            <span>Cadastrar</span>
-          </TabsTrigger>
+          {!isMobile && (
+            <>
+              <TabsTrigger value="history" className="flex items-center gap-1">
+                <History className="h-4 w-4" />
+                <span>Histórico</span>
+              </TabsTrigger>
+              <TabsTrigger value="register" className="flex items-center gap-1">
+                <UserPlus className="h-4 w-4" />
+                <span>Cadastrar</span>
+              </TabsTrigger>
+            </>
+          )}
         </TabsList>
+        
+        {isMobile && (
+          <TabsList className="grid grid-cols-2 mb-4 overflow-x-auto flex-nowrap">
+            <TabsTrigger value="history" className="flex items-center gap-1">
+              <History className="h-4 w-4" />
+              <span>Histórico</span>
+            </TabsTrigger>
+            <TabsTrigger value="register" className="flex items-center gap-1">
+              <UserPlus className="h-4 w-4" />
+              <span>Cadastrar</span>
+            </TabsTrigger>
+          </TabsList>
+        )}
         
         <TabsContent value="waiting">
           <h2 className="text-xl font-bold text-gastro-blue mb-3">Fila de Espera</h2>
@@ -256,6 +266,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   position={index + 1}
                   onRemove={() => handleRemoveClick(customer)}
                   onEdit={() => handleEditClick(customer)}
+                  isMobile={isMobile}
                 />
               ))}
             </div>
@@ -278,6 +289,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 onRemove={() => handleRemoveClick(currentlyServing)}
                 onFinishServing={() => handleFinishServingClick(currentlyServing)}
                 onEdit={() => handleEditClick(currentlyServing)}
+                isMobile={isMobile}
               />
             </div>
           )}
@@ -300,6 +312,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   onRemove={() => handleRemoveClick(customer)}
                   onEdit={() => handleEditClick(customer)}
                   isPriority
+                  isMobile={isMobile}
                 />
               ))}
             </div>
@@ -314,7 +327,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <BarChart className="h-5 w-5" />
               Estatísticas da Fila
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className={`grid gap-4 mb-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
               <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
                 <h4 className="text-sm font-medium text-gastro-blue mb-1">Clientes Hoje</h4>
                 <p className="text-2xl font-bold text-gastro-blue">
@@ -468,7 +481,8 @@ const CustomerCard = ({
   onRemove, 
   onEdit,
   onFinishServing, 
-  isPriority 
+  isPriority,
+  isMobile 
 }: { 
   customer: Customer;
   position: number;
@@ -476,6 +490,7 @@ const CustomerCard = ({
   onEdit: () => void;
   onFinishServing?: () => void;
   isPriority?: boolean;
+  isMobile?: boolean;
 }) => {
   const { preferences } = customer;
   const activePreferences = [];
@@ -486,11 +501,11 @@ const CustomerCard = ({
   if (preferences.infant) activePreferences.push("Criança de colo");
   if (preferences.withDog) activePreferences.push("Com cachorro");
   if (preferences.indoor) activePreferences.push("Mesa interna");
-  else activePreferences.push("Mesa externa");
+  if (preferences.outdoor) activePreferences.push("Mesa externa");
   
   return (
     <div className={`bg-white p-4 rounded-lg shadow-md ${isPriority ? 'border-l-4 border-gastro-orange' : ''}`}>
-      <div className="flex justify-between items-start">
+      <div className="flex justify-between items-start flex-wrap gap-2">
         <div>
           <div className="flex items-center">
             <div className={`${
@@ -508,7 +523,7 @@ const CustomerCard = ({
             )}
           </div>
           
-          <div className="flex items-center text-sm text-gastro-gray mt-1">
+          <div className="flex items-center text-sm text-gastro-gray mt-1 flex-wrap">
             <span className="mr-2">{customer.partySize} {customer.partySize > 1 ? 'pessoas' : 'pessoa'}</span>
             •
             <span className="mx-2">Tel: {customer.phone}</span>
@@ -519,9 +534,9 @@ const CustomerCard = ({
             </span>
           </div>
           
-          <div className="mt-2">
+          <div className="mt-2 flex flex-wrap gap-1">
             {activePreferences.map((pref, index) => (
-              <span key={index} className="preference-tag">
+              <span key={index} className="preference-tag inline-block bg-blue-50 text-gastro-blue text-xs px-2 py-1 rounded-full mr-1 mb-1">
                 {pref}
               </span>
             ))}

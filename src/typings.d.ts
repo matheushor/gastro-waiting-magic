@@ -1,4 +1,5 @@
 
+
 /**
  * Custom type declarations to help with incompatible type definitions
  */
@@ -61,7 +62,7 @@ declare module 'recharts' {
   export const YAxis: ComponentType<BaseProps & any>;
   export const CartesianGrid: ComponentType<BaseProps & any>;
   export const Tooltip: ComponentType<BaseProps & any>;
-  export const Legend: ComponentType<BaseProps & any>;
+  export const Legend: ComponentType<LegendProps & any>;
   export const ResponsiveContainer: ComponentType<BaseProps & any>;
   
   // Add any other recharts components you're using
@@ -71,3 +72,4 @@ declare module 'recharts' {
 interface Window {
   // Add any window extensions here if needed
 }
+

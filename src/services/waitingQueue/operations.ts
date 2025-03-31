@@ -194,7 +194,7 @@ export const calculateAverageWaitTime = (customers: Customer[]): number | null =
   
   if (completedWaits.length === 0) return null;
   
-  // Calcular o tempo de espera para cada cliente (tempo de chamada - tempo de entrada)
+  // Calcular o tempo de espera para cada grupo (diferença entre horário de chamada e entrada)
   const waitTimes = completedWaits.map(c => (c.calledAt || 0) - c.timestamp);
   const totalWaitTime = waitTimes.reduce((sum, time) => sum + time, 0);
   

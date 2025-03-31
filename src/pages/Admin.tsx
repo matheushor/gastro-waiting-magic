@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import AdminLogin from "@/components/admin/AdminLogin";
 import AdminDashboard from "@/components/admin/AdminDashboard";
@@ -5,6 +6,7 @@ import { Customer, WaitingQueueState } from "@/types";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { Home } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   subscribeToQueueChanges, 
   updateCustomer,
@@ -13,6 +15,7 @@ import {
   updateCustomerStatus,
   calculateAverageWaitTime
 } from "@/services/waitingQueueService";
+import { fetchDailyStatistics } from "@/services/waitingQueue/database";
 
 const Admin = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -20,6 +23,8 @@ const Admin = () => {
   const [activeTab, setActiveTab] = useState<'waiting' | 'called' | 'history' | 'priority' | 'register'>('waiting');
   const [calledHistory, setCalledHistory] = useState<Customer[]>([]);
   const [queueCounts, setQueueCounts] = useState<{time: string, count: number}[]>([]);
+  const [dailyStatistics, setDailyStatistics] = useState<{date: string, groups_count: number, people_count: number}[]>([]);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -42,6 +47,21 @@ const Admin = () => {
     
     return () => unsubscribe();
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (isLoggedIn && activeTab === 'history') {
+      loadDailyStatistics();
+    }
+  }, [isLoggedIn, activeTab]);
+
+  const loadDailyStatistics = async () => {
+    try {
+      const stats = await fetchDailyStatistics();
+      setDailyStatistics(stats);
+    } catch (error) {
+      console.error("Erro ao carregar estatísticas diárias:", error);
+    }
+  };
 
   const handleLogin = () => {
     setIsLoggedIn(true);
@@ -154,6 +174,8 @@ const Admin = () => {
           queueCounts={queueCounts}
           avgWaitTime={getAverageWaitTime()}
           onRegisterCustomer={handleRegisterCustomer}
+          dailyStats={dailyStatistics}
+          isMobile={isMobile}
         />
       )}
 

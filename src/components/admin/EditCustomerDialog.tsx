@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Customer, Preferences } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
   });
 
   // Set initial values when customer changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (customer) {
       setName(customer.name);
       setPhone(customer.phone);
@@ -59,19 +59,13 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
       return;
     }
 
-    // Make sure at least one of indoor or outdoor is selected
-    const updatedPreferences = { ...preferences };
-    if (!preferences.indoor && !preferences.outdoor) {
-      updatedPreferences.indoor = true;
-    }
-
     const updatedCustomer: Customer = {
       ...customer,
       name,
       phone,
       partySize,
-      preferences: updatedPreferences,
-      priority: updatedPreferences.pregnant || updatedPreferences.elderly || updatedPreferences.disabled || updatedPreferences.infant,
+      preferences,
+      priority: preferences.pregnant || preferences.elderly || preferences.disabled || preferences.infant,
     };
 
     onSave(updatedCustomer);
@@ -82,19 +76,6 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
       ...prev,
       [key]: !prev[key],
     }));
-
-    // If toggling indoor/outdoor, make sure at least one is selected
-    if (key === "indoor" && preferences.indoor && !preferences.outdoor) {
-      setPreferences((prev) => ({
-        ...prev,
-        outdoor: true,
-      }));
-    } else if (key === "outdoor" && preferences.outdoor && !preferences.indoor) {
-      setPreferences((prev) => ({
-        ...prev,
-        indoor: true,
-      }));
-    }
   };
 
   if (!customer) return null;
