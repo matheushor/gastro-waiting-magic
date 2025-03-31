@@ -1,8 +1,4 @@
-
-// Apply Radix UI patches first
-import { applyRadixPatches } from "@/lib/radix-patches";
-applyRadixPatches();
-
+// The patches are now applied in main.tsx before importing App
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
