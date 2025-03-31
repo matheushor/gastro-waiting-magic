@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import AdminLogin from "@/components/admin/AdminLogin";
 import AdminDashboard from "@/components/admin/AdminDashboard";
@@ -138,6 +139,7 @@ const Admin = () => {
   };
 
   const calculateAverageWaitTime = () => {
+    // Get customers who have been called and have both timestamp and calledAt
     const calledCustomers = queueState.customers
       .filter(c => c.status === 'called' && c.calledAt && c.timestamp)
       .concat(calledHistory.filter(c => c.calledAt && c.timestamp));
@@ -159,6 +161,7 @@ const Admin = () => {
     
     if (count === 0) return null;
     
+    // Return average wait time in minutes
     return Math.ceil(totalWaitTime / count / 60000);
   };
 

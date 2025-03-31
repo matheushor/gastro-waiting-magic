@@ -29,6 +29,39 @@ export async function updateCustomerStatus(
   let calledAt = currentData.called_at;
   if (status === "called" && (!calledAt || currentData.status !== "called")) {
     calledAt = new Date().toISOString();
+    
+    // Update daily statistics when a customer is called
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      // Check if there's already a record for today
+      const { data: statsData } = await supabase
+        .from("daily_statistics")
+        .select("*")
+        .eq("date", today)
+        .single();
+      
+      if (statsData) {
+        // Increment group count
+        await supabase
+          .rpc("increment_daily_stats", { 
+            stats_date: today, 
+            group_increment: 1, 
+            people_increment: currentData.party_size 
+          });
+      } else {
+        // Create a new record for today
+        await supabase
+          .from("daily_statistics")
+          .insert({
+            date: today,
+            groups_count: 1,
+            people_count: currentData.party_size
+          });
+      }
+    } catch (error) {
+      console.error("Error updating daily statistics:", error);
+      // Continue even if statistics update fails
+    }
   }
 
   // Update the database

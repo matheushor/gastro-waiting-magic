@@ -1,13 +1,13 @@
 
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Customer } from "@/types";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
-import { Customer, Preferences } from "@/types";
 import { Label } from "@/components/ui/label";
-import { User, Users, Heart, Shield, Home, Wind } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { v4 as uuidv4 } from "uuid";
+import { toast } from "sonner";
 
 interface AdminRegistrationFormProps {
   onRegister: (customer: Customer) => void;
@@ -15,289 +15,197 @@ interface AdminRegistrationFormProps {
 
 const AdminRegistrationForm: React.FC<AdminRegistrationFormProps> = ({ onRegister }) => {
   const [name, setName] = useState("");
-  const [partySize, setPartySize] = useState(1);
-  const [preferences, setPreferences] = useState<Preferences>({
+  const [phone, setPhone] = useState("");
+  const [partySize, setPartySize] = useState<number>(1);
+  const [preferences, setPreferences] = useState({
     pregnant: false,
     elderly: false,
     disabled: false,
     infant: false,
     withDog: false,
-    indoor: true,
+    indoor: false,
     outdoor: false,
   });
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Atualiza preferências quando "com cachorro" é selecionado
-  React.useEffect(() => {
-    if (preferences.withDog) {
-      setPreferences(prev => ({
-        ...prev,
-        outdoor: true,
-        indoor: false
-      }));
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!name) {
+      toast.error("O nome do cliente é obrigatório");
+      return;
     }
-  }, [preferences.withDog]);
 
-  // Garante que apenas um tipo de mesa está selecionado por vez
-  React.useEffect(() => {
-    if (preferences.indoor && preferences.outdoor) {
-      setPreferences(prev => ({
-        ...prev,
-        outdoor: false
-      }));
+    if (!phone) {
+      toast.error("O telefone do cliente é obrigatório");
+      return;
     }
-  }, [preferences.indoor]);
 
-  const handlePreferenceChange = (key: keyof Preferences) => {
-    setPreferences(prev => {
-      const newPrefs = { ...prev, [key]: !prev[key] };
-      
-      // Se selecionar mesa interna, desmarca mesa externa
-      if (key === 'indoor' && newPrefs.indoor) {
-        newPrefs.outdoor = false;
-      }
-      // Se selecionar mesa externa, desmarca mesa interna
-      else if (key === 'outdoor' && newPrefs.outdoor) {
-        newPrefs.indoor = false;
-      }
-      
-      return newPrefs;
+    const newCustomer: Customer = {
+      id: uuidv4(),
+      name,
+      phone: phone.replace(/\D/g, ""),
+      partySize,
+      preferences,
+      timestamp: Date.now(),
+      status: "waiting",
+      priority: preferences.pregnant || preferences.elderly || preferences.disabled || preferences.infant,
+    };
+
+    onRegister(newCustomer);
+    
+    // Reset the form
+    setName("");
+    setPhone("");
+    setPartySize(1);
+    setPreferences({
+      pregnant: false,
+      elderly: false,
+      disabled: false,
+      infant: false,
+      withDog: false,
+      indoor: false,
+      outdoor: false,
     });
   };
 
-  const handlePartySizeChange = (value: string) => {
-    setPartySize(parseInt(value));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePhoneInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, "");
     
-    if (!name.trim()) {
-      toast.error("Por favor, informe o nome do cliente");
-      return;
+    // Format phone number: (99) 99999-9999
+    let formattedValue = "";
+    if (value.length <= 2) {
+      formattedValue = value;
+    } else if (value.length <= 7) {
+      formattedValue = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+    } else if (value.length <= 11) {
+      formattedValue = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
+    } else {
+      formattedValue = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7, 11)}`;
     }
     
-    setIsLoading(true);
-    
-    try {
-      const hasPriority = preferences.pregnant || preferences.elderly || 
-                         preferences.disabled || preferences.infant;
-                         
-      const newCustomer: Customer = {
-        id: crypto.randomUUID(), // Generate proper UUID
-        name,
-        // Usando número aleatório como telefone para clientes cadastrados pelo admin
-        phone: `9${Math.floor(Math.random() * 90000000) + 10000000}`,
-        partySize,
-        preferences,
-        timestamp: Date.now(),
-        status: "waiting",
-        priority: hasPriority,
-      };
-      
-      onRegister(newCustomer);
-      toast.success("Cliente adicionado com sucesso!");
-      
-      setName("");
-      setPartySize(1);
-      setPreferences({
-        pregnant: false,
-        elderly: false,
-        disabled: false,
-        infant: false,
-        withDog: false,
-        indoor: true,
-        outdoor: false,
-      });
-    } catch (error) {
-      console.error("Erro ao registrar cliente:", error);
-      toast.error("Erro ao registrar cliente. Tente novamente.");
-    } finally {
-      setIsLoading(false);
-    }
+    setPhone(formattedValue);
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg border border-blue-100 overflow-hidden">
-      <div className="bg-gradient-to-r from-gastro-blue to-blue-600 text-white p-4">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          <User className="h-5 w-5" />
-          Adicionar Cliente
-        </h2>
-      </div>
-
-      <form onSubmit={handleSubmit} className="p-4 space-y-4">
-        <div>
-          <Label htmlFor="admin-name" className="text-gastro-gray font-semibold flex items-center gap-1">
-            <User className="h-4 w-4 text-gastro-blue" />
-            Nome do cliente
-          </Label>
+    <div className="bg-white p-6 rounded-lg shadow-md">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Nome do Cliente</Label>
           <Input
-            id="admin-name"
+            id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mt-1 border-2 border-blue-100 focus:border-gastro-blue"
-            placeholder="Digite o nome do cliente"
-            disabled={isLoading}
+            placeholder="Nome completo"
           />
         </div>
-
-        <div>
-          <Label htmlFor="admin-partySize" className="text-gastro-gray font-semibold flex items-center gap-1">
-            <Users className="h-4 w-4 text-gastro-blue" />
-            Número de pessoas
-          </Label>
-          <Select onValueChange={handlePartySizeChange} defaultValue="1">
-            <SelectTrigger className="w-full mt-1 border-2 border-blue-100 focus:border-gastro-blue">
-              <SelectValue placeholder="Selecione o número de pessoas" />
+        
+        <div className="space-y-2">
+          <Label htmlFor="phone">Telefone</Label>
+          <Input
+            id="phone"
+            value={phone}
+            onChange={handlePhoneInput}
+            placeholder="(99) 99999-9999"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="partySize">Quantidade de pessoas</Label>
+          <Select
+            value={partySize.toString()}
+            onValueChange={(value) => setPartySize(Number(value))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione" />
             </SelectTrigger>
             <SelectContent>
-              {[...Array(10)].map((_, i) => (
-                <SelectItem key={i} value={(i + 1).toString()}>
-                  {i + 1} {i + 1 > 1 ? 'pessoas' : 'pessoa'}
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                <SelectItem key={num} value={num.toString()}>
+                  {num} {num === 1 ? 'pessoa' : 'pessoas'}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <p className="text-gastro-gray font-semibold mb-2">Preferências Prioritárias</p>
-            <div className="space-y-2 bg-blue-50 p-2 rounded-md">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="admin-pregnant"
-                  checked={preferences.pregnant}
-                  onCheckedChange={() => handlePreferenceChange("pregnant")}
-                  disabled={isLoading}
-                  className="border-gastro-blue data-[state=checked]:bg-gastro-orange"
-                />
-                <label
-                  htmlFor="admin-pregnant"
-                  className="text-sm font-medium flex items-center gap-1 cursor-pointer"
-                >
-                  <Heart className="h-4 w-4 text-gastro-orange" />
-                  Gestante
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="admin-elderly"
-                  checked={preferences.elderly}
-                  onCheckedChange={() => handlePreferenceChange("elderly")}
-                  disabled={isLoading}
-                  className="border-gastro-blue data-[state=checked]:bg-gastro-orange"
-                />
-                <label
-                  htmlFor="admin-elderly"
-                  className="text-sm font-medium flex items-center gap-1 cursor-pointer"
-                >
-                  <User className="h-4 w-4 text-gastro-orange" />
-                  Idoso
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="admin-disabled"
-                  checked={preferences.disabled}
-                  onCheckedChange={() => handlePreferenceChange("disabled")}
-                  disabled={isLoading}
-                  className="border-gastro-blue data-[state=checked]:bg-gastro-orange"
-                />
-                <label
-                  htmlFor="admin-disabled"
-                  className="text-sm font-medium flex items-center gap-1 cursor-pointer"
-                >
-                  <Heart className="h-4 w-4 text-gastro-orange" />
-                  PCD
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="admin-infant"
-                  checked={preferences.infant}
-                  onCheckedChange={() => handlePreferenceChange("infant")}
-                  disabled={isLoading}
-                  className="border-gastro-blue data-[state=checked]:bg-gastro-orange"
-                />
-                <label
-                  htmlFor="admin-infant"
-                  className="text-sm font-medium flex items-center gap-1 cursor-pointer"
-                >
-                  <User className="h-4 w-4 text-gastro-orange" />
-                  Criança de colo
-                </label>
-              </div>
+        
+        <div className="space-y-2">
+          <Label>Preferências</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="admin-pregnant"
+                checked={preferences.pregnant}
+                onCheckedChange={(checked) => 
+                  setPreferences({...preferences, pregnant: checked === true})
+                }
+              />
+              <Label htmlFor="admin-pregnant">Gestante</Label>
             </div>
-          </div>
-          
-          <div>
-            <p className="text-gastro-gray font-semibold mb-2">Outras Preferências</p>
-            <div className="space-y-2 bg-blue-50 p-2 rounded-md">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="admin-withDog"
-                  checked={preferences.withDog}
-                  onCheckedChange={() => handlePreferenceChange("withDog")}
-                  disabled={isLoading}
-                  className="border-gastro-blue data-[state=checked]:bg-gastro-blue"
-                />
-                <label
-                  htmlFor="admin-withDog"
-                  className="text-sm font-medium flex items-center gap-1 cursor-pointer"
-                >
-                  <Shield className="h-4 w-4 text-gastro-blue" />
-                  Com cachorro
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="admin-indoor"
-                  checked={preferences.indoor}
-                  onCheckedChange={() => handlePreferenceChange("indoor")}
-                  disabled={isLoading || preferences.withDog}
-                  className="border-gastro-blue data-[state=checked]:bg-gastro-blue"
-                />
-                <label
-                  htmlFor="admin-indoor"
-                  className={`text-sm font-medium ${preferences.withDog ? 'opacity-50' : 'opacity-100'} flex items-center gap-1 cursor-pointer`}
-                >
-                  <Home className="h-4 w-4 text-gastro-blue" />
-                  Mesa interna
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="admin-outdoor"
-                  checked={preferences.outdoor}
-                  onCheckedChange={() => handlePreferenceChange("outdoor")}
-                  disabled={isLoading || preferences.withDog}
-                  className="border-gastro-blue data-[state=checked]:bg-gastro-blue"
-                />
-                <label
-                  htmlFor="admin-outdoor"
-                  className={`text-sm font-medium ${preferences.withDog ? 'opacity-50' : 'opacity-100'} flex items-center gap-1 cursor-pointer`}
-                >
-                  <Wind className="h-4 w-4 text-gastro-blue" />
-                  Mesa externa
-                </label>
-              </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="admin-elderly"
+                checked={preferences.elderly}
+                onCheckedChange={(checked) => 
+                  setPreferences({...preferences, elderly: checked === true})
+                }
+              />
+              <Label htmlFor="admin-elderly">Idoso</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="admin-disabled"
+                checked={preferences.disabled}
+                onCheckedChange={(checked) => 
+                  setPreferences({...preferences, disabled: checked === true})
+                }
+              />
+              <Label htmlFor="admin-disabled">PCD</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="admin-infant"
+                checked={preferences.infant}
+                onCheckedChange={(checked) => 
+                  setPreferences({...preferences, infant: checked === true})
+                }
+              />
+              <Label htmlFor="admin-infant">Criança de colo</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="admin-withDog"
+                checked={preferences.withDog}
+                onCheckedChange={(checked) => 
+                  setPreferences({...preferences, withDog: checked === true})
+                }
+              />
+              <Label htmlFor="admin-withDog">Com cachorro</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="admin-indoor"
+                checked={preferences.indoor}
+                onCheckedChange={(checked) => 
+                  setPreferences({...preferences, indoor: checked === true})
+                }
+              />
+              <Label htmlFor="admin-indoor">Mesa interna</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="admin-outdoor"
+                checked={preferences.outdoor}
+                onCheckedChange={(checked) => 
+                  setPreferences({...preferences, outdoor: checked === true})
+                }
+              />
+              <Label htmlFor="admin-outdoor">Mesa externa</Label>
             </div>
           </div>
         </div>
-
-        <Button 
-          type="submit" 
-          className="w-full bg-gastro-orange hover:bg-orange-600 text-white font-bold py-2" 
-          disabled={isLoading}
-        >
-          {isLoading ? "Processando..." : "Adicionar Cliente"}
+        
+        <Button type="submit" className="w-full">
+          Cadastrar Cliente
         </Button>
       </form>
     </div>

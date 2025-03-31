@@ -9,44 +9,61 @@ import { toast } from "sonner";
 import { BellRing, ClipboardList, LogIn, Bell, MapPin, AlertCircle, Home } from "lucide-react";
 import { subscribeToQueueChanges, addCustomer, removeCustomer } from "@/services/waitingQueueService";
 import { Link } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const [queueState, setQueueState] = useState<WaitingQueueState>({ customers: [], currentlyServing: null });
   const [calledCustomer, setCalledCustomer] = useState<Customer | null>(null);
+  const [userPhone, setUserPhone] = useState<string>(() => localStorage.getItem('userPhone') || '');
+  const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
+  const [phoneInput, setPhoneInput] = useState("");
   
   useEffect(() => {
     const unsubscribe = subscribeToQueueChanges((newState) => {
       setQueueState(newState);
       
-      const newCalled = newState.customers.find(c => 
-        c.status === 'called' && 
-        (!calledCustomer || c.id !== calledCustomer.id)
-      );
-      
-      if (newCalled && !calledCustomer) {
-        // Verificar se este cliente é o que está sendo visualizado atualmente
-        // Isso é apenas uma simulação - na realidade, você precisaria de um sistema
-        // de autenticação ou identificação para saber qual cliente está visualizando
-        setCalledCustomer(newCalled);
-        
-        toast(
-          <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-gastro-orange" />
-            <div>
-              <p className="font-bold">Cliente chamado!</p>
-              <p className="text-sm">Cliente {newCalled.name} foi chamado.</p>
-            </div>
-          </div>
+      // Check if there's a customer with matching phone being called
+      if (userPhone) {
+        const matchingCustomer = newState.customers.find(c => 
+          c.status === 'called' && 
+          c.phone === userPhone &&
+          (!calledCustomer || c.id !== calledCustomer.id)
         );
+        
+        if (matchingCustomer) {
+          setCalledCustomer(matchingCustomer);
+          
+          toast(
+            <div className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-gastro-orange" />
+              <div>
+                <p className="font-bold">Cliente chamado!</p>
+                <p className="text-sm">Olá {matchingCustomer.name}, sua vez chegou!</p>
+              </div>
+            </div>
+          );
+        }
       }
     });
     
+    // If no phone saved, ask for it
+    if (!userPhone) {
+      setPhoneDialogOpen(true);
+    }
+    
     return () => unsubscribe();
-  }, [calledCustomer]);
+  }, [userPhone, calledCustomer]);
 
   const handleCustomerRegistration = async (newCustomer: Customer) => {
     try {
       await addCustomer(newCustomer);
+      
+      // Save user phone for notifications
+      setUserPhone(newCustomer.phone);
+      localStorage.setItem('userPhone', newCustomer.phone);
+      
       toast.success("Cadastro realizado com sucesso!");
     } catch (error) {
       console.error("Erro ao registrar cliente:", error);
@@ -98,6 +115,35 @@ const Index = () => {
     } catch (error) {
       console.error("Erro ao processar retorno à fila:", error);
       toast.error("Erro ao processar seu retorno à fila. Tente novamente.");
+    }
+  };
+  
+  const handlePhoneInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, "");
+    
+    // Format phone number: (99) 99999-9999
+    let formattedValue = "";
+    if (value.length <= 2) {
+      formattedValue = value;
+    } else if (value.length <= 7) {
+      formattedValue = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+    } else if (value.length <= 11) {
+      formattedValue = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
+    } else {
+      formattedValue = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7, 11)}`;
+    }
+    
+    setPhoneInput(formattedValue);
+  };
+  
+  const savePhoneNumber = () => {
+    const cleanPhone = phoneInput.replace(/\D/g, "");
+    if (cleanPhone.length >= 8) {
+      setUserPhone(cleanPhone);
+      localStorage.setItem('userPhone', cleanPhone);
+      setPhoneDialogOpen(false);
+    } else {
+      toast.error("Por favor, digite um número de telefone válido");
     }
   };
 
@@ -165,6 +211,32 @@ const Index = () => {
           <Home className="h-5 w-5 text-gastro-blue" />
         </Link>
       </div>
+      
+      <Dialog open={phoneDialogOpen} onOpenChange={setPhoneDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Digite seu telefone para receber notificações</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Para receber notificações quando sua vez chegar, precisamos do seu número de telefone.
+            </p>
+            <Input
+              placeholder="(99) 99999-9999"
+              value={phoneInput}
+              onChange={handlePhoneInput}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setPhoneDialogOpen(false)}>
+              Depois
+            </Button>
+            <Button type="button" onClick={savePhoneNumber}>
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
