@@ -47,7 +47,42 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_daily_statistics: {
+        Args: {
+          limit_param: number
+        }
+        Returns: {
+          date: string
+          groups_count: number
+          people_count: number
+        }[]
+      }
+      get_daily_statistics_by_date: {
+        Args: {
+          date_param: string
+        }
+        Returns: {
+          date: string
+          groups_count: number
+          people_count: number
+        }[]
+      }
+      insert_daily_statistics: {
+        Args: {
+          date_param: string
+          groups_count_value: number
+          people_count_value: number
+        }
+        Returns: undefined
+      }
+      update_daily_statistics: {
+        Args: {
+          date_param: string
+          groups_count_increment: number
+          people_count_increment: number
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

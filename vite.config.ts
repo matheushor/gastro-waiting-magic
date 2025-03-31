@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     hmr: {
-      timeout: 120000, // Increase timeout for HMR to 2 minutes
+      timeout: 240000, // Increase timeout for HMR to 4 minutes
     },
     allowedHosts: [
       "27b530cc-768b-4a51-9152-9156fb7ae1d6.lovableproject.com",
@@ -22,6 +22,7 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     exclude: ["uuid"], // Explicitly exclude uuid to prevent it from being processed
+    include: ["react", "react-dom", "recharts"], // Explicitly include critical dependencies
   },
   build: {
     outDir: "dist",
@@ -29,6 +30,9 @@ export default defineConfig(({ mode }) => ({
       // Make sure to exclude problematic dependencies
       external: ["uuid"],
     },
+  },
+  esbuild: {
+    logOverride: { 'this-is-undefined-in-esm': 'silent' }
   },
   plugins: [
     react(),

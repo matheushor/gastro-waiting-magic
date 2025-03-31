@@ -45,7 +45,7 @@ export const recordDailyStatistics = async (partySize: number): Promise<void> =>
     const today = new Date().toISOString().split('T')[0];
     
     // Using a more flexible approach to avoid type errors
-    // First check if we have a record for today
+    // First check if we have a record for today using the RPC function
     const { data: existingStats, error: fetchError } = await supabase
       .rpc('get_daily_statistics_by_date', { date_param: today });
     

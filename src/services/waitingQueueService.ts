@@ -66,12 +66,12 @@ export const callCustomer = async (id: string): Promise<void> => {
   }
 };
 
-// Update customer status in the waiting queue
-export const updateCustomer = async (id: string, status: "waiting" | "called" | "seated" | "left"): Promise<Customer> => {
+// Update customer information in the waiting queue
+export const updateCustomer = async (customer: Customer): Promise<void> => {
   try {
-    return await updateCustomerStatus(id, status);
+    await updateCustomerInQueue(customer);
   } catch (error) {
-    console.error("Error updating customer status:", error);
+    console.error("Error updating customer:", error);
     throw error;
   }
 };

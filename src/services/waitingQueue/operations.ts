@@ -5,6 +5,11 @@ import { getCurrentQueue, setCurrentQueue } from "./storage";
 import { recordDailyStatistics } from "./database";
 import { Json } from "@/integrations/supabase/types";
 
+// Helper function to convert Customer preferences to Json
+const convertPreferencesToJson = (preferences: any): Json => {
+  return preferences as unknown as Json;
+};
+
 // Add a customer to the waiting queue
 export const addCustomer = async (customer: Customer): Promise<void> => {
   // Convert Preferences to JSON-compatible format
@@ -13,7 +18,7 @@ export const addCustomer = async (customer: Customer): Promise<void> => {
     name: customer.name,
     phone: customer.phone,
     party_size: customer.partySize,
-    preferences: customer.preferences as unknown as Json,
+    preferences: convertPreferencesToJson(customer.preferences),
     status: customer.status,
     timestamp: customer.timestamp,
   };
@@ -171,7 +176,7 @@ export const updateCustomer = async (customer: Customer): Promise<void> => {
         name: customer.name,
         phone: customer.phone,
         party_size: customer.partySize,
-        preferences: customer.preferences as unknown as Json,
+        preferences: convertPreferencesToJson(customer.preferences),
       })
       .eq("id", customer.id);
       
