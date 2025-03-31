@@ -21,7 +21,7 @@ export async function addCustomer(customer: Customer): Promise<void> {
     ? new Date(customer.calledAt).toISOString()
     : customer.calledAt;
 
-  const { error } = await supabase.from("customers").insert({
+  const { error } = await supabase.from("waiting_customers").insert({
     id: customer.id,
     name: customer.name,
     phone: customer.phone,

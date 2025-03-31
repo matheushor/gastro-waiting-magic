@@ -15,7 +15,7 @@ export async function updateCustomerStatus(
 ): Promise<Customer> {
   // Get the current data first
   const { data: currentData, error: fetchError } = await supabase
-    .from("customers")
+    .from("waiting_customers")
     .select("*")
     .eq("id", id)
     .single();
@@ -33,7 +33,7 @@ export async function updateCustomerStatus(
 
   // Update the database
   const { data, error } = await supabase
-    .from("customers")
+    .from("waiting_customers")
     .update({
       status: status,
       called_at: calledAt
