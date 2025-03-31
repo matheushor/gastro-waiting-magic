@@ -39,15 +39,20 @@ export const fetchQueueFromDatabase = async (): Promise<void> => {
 // Fetch daily statistics from the database
 export const fetchDailyStatistics = async (): Promise<{ groups: number, people: number }> => {
   try {
+    const today = new Date().toISOString().split('T')[0];
+    
     const { data, error } = await supabase
-      .rpc('get_daily_statistics_for_today');
+      .from("daily_statistics")
+      .select("groups_count, people_count")
+      .eq("date", today)
+      .maybeSingle();
     
     if (error) throw error;
     
-    if (data && data.length > 0) {
+    if (data) {
       return {
-        groups: data[0].groups_count,
-        people: data[0].people_count
+        groups: data.groups_count,
+        people: data.people_count
       };
     }
     

@@ -11,58 +11,75 @@ export const subscribeToQueueChanges = (
   subscribers.push(callback);
   callback({ ...getCurrentQueue() });
   
-  // Use a fallback approach that doesn't depend on WebSockets
-  let supbaseSubscriptionActive = false;
+  // Set up real-time subscription using Supabase
+  let supabaseSubscriptionActive = false;
   
   try {
-    // Safer way to check if we can use Supabase
-    if (supabase && typeof supabase.channel === 'function') {
-      try {
-        const channel = supabase
-          .channel('public:waiting_customers')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'waiting_customers' }, (payload) => {
-            fetchQueueFromDatabase();
-          })
-          .subscribe((status) => {
-            if (status === 'SUBSCRIBED') {
-              supbaseSubscriptionActive = true;
-              fetchQueueFromDatabase(); // Initial fetch when subscription is successful
-            } else {
-              console.warn("Supabase subscription status:", status);
-            }
-          });
-          
-        // Return unsubscribe function that handles both Supabase and local
-        return () => {
-          const index = subscribers.indexOf(callback);
-          if (index !== -1) {
-            subscribers.splice(index, 1);
-          }
-          
-          if (supbaseSubscriptionActive) {
-            supabase.removeChannel(channel);
-          }
-        };
-      } catch (wsError) {
-        console.warn("WebSocket connection failed, falling back to local updates", wsError);
+    // First, fetch initial data
+    fetchQueueFromDatabase().then(() => {
+      callback({ ...getCurrentQueue() });
+    });
+    
+    // Set up real-time channel
+    const channel = supabase
+      .channel('public:waiting_customers')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'waiting_customers' }, 
+        async () => {
+          await fetchQueueFromDatabase();
+          callback({ ...getCurrentQueue() });
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          supabaseSubscriptionActive = true;
+          console.log("Supabase real-time subscription active");
+        } else {
+          console.warn("Supabase subscription status:", status);
+        }
+      });
+      
+    // Set up subscription for daily statistics as well
+    const statsChannel = supabase
+      .channel('public:daily_statistics')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'daily_statistics' }, 
+        () => {
+          // We don't need to do anything here, the Admin page will
+          // fetch statistics when needed
+          console.log("Daily statistics updated");
+        }
+      )
+      .subscribe();
+      
+    // Return unsubscribe function that handles both Supabase and local
+    return () => {
+      const index = subscribers.indexOf(callback);
+      if (index !== -1) {
+        subscribers.splice(index, 1);
       }
-    }
+      
+      if (supabaseSubscriptionActive) {
+        supabase.removeChannel(channel);
+        supabase.removeChannel(statsChannel);
+      }
+    };
   } catch (error) {
     console.warn("Failed to set up Supabase connection, using local updates only", error);
+    
+    // If we reach here, we're using local updates only
+    // Set up a polling mechanism as a fallback
+    const pollingInterval = setInterval(() => {
+      callback({ ...getCurrentQueue() });
+    }, 5000);
+    
+    // Return unsubscribe function for local updates
+    return () => {
+      const index = subscribers.indexOf(callback);
+      if (index !== -1) {
+        subscribers.splice(index, 1);
+      }
+      clearInterval(pollingInterval);
+    };
   }
-  
-  // If we reach here, we're using local updates only
-  // Set up a polling mechanism as a fallback
-  const pollingInterval = setInterval(() => {
-    callback({ ...getCurrentQueue() });
-  }, 5000);
-  
-  // Return unsubscribe function for local updates
-  return () => {
-    const index = subscribers.indexOf(callback);
-    if (index !== -1) {
-      subscribers.splice(index, 1);
-    }
-    clearInterval(pollingInterval);
-  };
 };
