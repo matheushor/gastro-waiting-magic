@@ -20,13 +20,13 @@ declare module 'd3-shape' {
   export function area(): any;
   export function arc(): any;
   export function pie(): any;
-  export function curveLinear: any;
+  export const curveLinear: any; // Fix: changed from function to const
   // Add any other d3-shape functions you're using
 }
 
 // Bypass recharts that depends on d3
 declare module 'recharts' {
-  import { ComponentType, ReactNode, SVGProps } from 'react';
+  import { ComponentType, ReactNode } from 'react';
   
   // Define basic component props
   interface BaseProps {

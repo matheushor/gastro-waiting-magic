@@ -21,12 +21,9 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
   },
   optimizeDeps: {
+    force: true, // Force dependency optimization
     exclude: ["uuid"], // Explicitly exclude uuid to prevent it from being processed
     include: ["react", "react-dom"], // Include critical dependencies but exclude problematic ones
-    esbuildOptions: {
-      // Ensure TypeScript is processed correctly
-      tsconfig: './tsconfig.json',
-    },
   },
   build: {
     outDir: "dist",
