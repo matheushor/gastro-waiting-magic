@@ -16,10 +16,10 @@ export async function addCustomer(customer: Customer): Promise<void> {
     ? parseInt(customer.timestamp)
     : customer.timestamp;
 
-  // Convert called_at to ISO string if it's a number
-  const called_at = typeof customer.called_at === "number"
-    ? new Date(customer.called_at).toISOString()
-    : customer.called_at;
+  // Convert calledAt to ISO string if it's a number
+  const called_at = typeof customer.calledAt === "number"
+    ? new Date(customer.calledAt).toISOString()
+    : customer.calledAt;
 
   const { error } = await supabase.from("customers").insert({
     id: customer.id,

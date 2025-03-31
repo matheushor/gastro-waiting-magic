@@ -1,30 +1,45 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Customer, Preferences } from "@/types";
+import { Customer } from "@/types";
 import type { Json } from "@/integrations/supabase/types";
 
 /**
- * Update a customer status
- * @param id Customer ID
- * @param status New status
- * @returns Promise<Customer | null>
+ * Update a customer's status in the waiting queue
+ * @param id Customer ID to update
+ * @param status New status ('waiting', 'called', 'seated', 'left')
+ * @returns Promise<Customer> Updated customer object
  */
 export async function updateCustomerStatus(
   id: string,
   status: "waiting" | "called" | "seated" | "left"
-): Promise<Customer | null> {
-  const now = new Date();
-  const timestamp = now.getTime();
+): Promise<Customer> {
+  // Get the current data first
+  const { data: currentData, error: fetchError } = await supabase
+    .from("customers")
+    .select("*")
+    .eq("id", id)
+    .single();
 
-  // Update the customer in the database
+  if (fetchError) {
+    console.error("Error fetching customer data:", fetchError);
+    throw fetchError;
+  }
+
+  // Determine calledAt based on the new status
+  let calledAt = currentData.called_at;
+  if (status === "called" && (!calledAt || currentData.status !== "called")) {
+    calledAt = new Date().toISOString();
+  }
+
+  // Update the database
   const { data, error } = await supabase
     .from("customers")
     .update({
-      status,
-      called_at: status === "called" ? now.toISOString() : null,
+      status: status,
+      called_at: calledAt
     })
     .eq("id", id)
-    .select("*")
+    .select()
     .single();
 
   if (error) {
@@ -32,24 +47,19 @@ export async function updateCustomerStatus(
     throw error;
   }
 
-  if (!data) return null;
-
-  // Convert the data to a Customer object
-  const customer: Customer = {
+  // Transform the data back to match our Customer type
+  const updatedCustomer: Customer = {
     id: data.id,
     name: data.name,
     phone: data.phone,
     partySize: data.party_size,
-    preferences: data.preferences as unknown as Preferences,
+    preferences: data.preferences as unknown as Customer['preferences'],
     timestamp: data.timestamp,
-    status: data.status as "waiting" | "called" | "seated" | "left",
-    called_at: data.called_at ? new Date(data.called_at).getTime() : null,
-    priority:
-      (data.preferences as unknown as Preferences).pregnant ||
-      (data.preferences as unknown as Preferences).elderly ||
-      (data.preferences as unknown as Preferences).disabled ||
-      (data.preferences as unknown as Preferences).infant,
+    status: data.status,
+    calledAt: data.called_at ? new Date(data.called_at).getTime() : undefined,
+    priority: data.preferences.pregnant || data.preferences.elderly || 
+              data.preferences.disabled || data.preferences.infant,
   };
 
-  return customer;
+  return updatedCustomer;
 }

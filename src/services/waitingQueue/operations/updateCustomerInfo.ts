@@ -1,53 +1,71 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Customer, Preferences } from "@/types";
+import { Customer } from "@/types";
 import type { Json } from "@/integrations/supabase/types";
 
 /**
- * Update a customer preferences
- * @param id Customer ID
- * @param preferences New preferences
- * @returns Promise<Customer | null>
+ * Update customer information in the waiting queue
+ * @param id Customer ID to update
+ * @param customerInfo Updated customer information
+ * @returns Promise<Customer> Updated customer object
  */
 export async function updateCustomerInfo(
   id: string,
-  partySize: number,
-  preferences: Preferences
-): Promise<Customer | null> {
-  // Update the customer in the database
+  customerInfo: Partial<Customer>
+): Promise<Customer> {
+  // Get the current data first
+  const { data: currentData, error: fetchError } = await supabase
+    .from("customers")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (fetchError) {
+    console.error("Error fetching customer data:", fetchError);
+    throw fetchError;
+  }
+
+  // Prepare the data to update
+  const updateData: Record<string, any> = {};
+
+  if (customerInfo.name) updateData.name = customerInfo.name;
+  if (customerInfo.phone) updateData.phone = customerInfo.phone;
+  if (customerInfo.partySize) updateData.party_size = customerInfo.partySize;
+  if (customerInfo.preferences) updateData.preferences = customerInfo.preferences as unknown as Json;
+  if (customerInfo.status) updateData.status = customerInfo.status;
+  if (customerInfo.timestamp) updateData.timestamp = customerInfo.timestamp;
+  if (customerInfo.calledAt !== undefined) {
+    updateData.called_at = typeof customerInfo.calledAt === "number"
+      ? new Date(customerInfo.calledAt).toISOString()
+      : customerInfo.calledAt;
+  }
+
+  // Update the database
   const { data, error } = await supabase
     .from("customers")
-    .update({
-      party_size: partySize,
-      preferences: preferences as unknown as Json,
-    })
+    .update(updateData)
     .eq("id", id)
-    .select("*")
+    .select()
     .single();
 
   if (error) {
-    console.error("Error updating customer preferences:", error);
+    console.error("Error updating customer:", error);
     throw error;
   }
 
-  if (!data) return null;
-
-  // Convert the data to a Customer object
-  const customer: Customer = {
+  // Transform the data back to match our Customer type
+  const updatedCustomer: Customer = {
     id: data.id,
     name: data.name,
     phone: data.phone,
     partySize: data.party_size,
-    preferences: data.preferences as unknown as Preferences,
+    preferences: data.preferences as unknown as Customer['preferences'],
     timestamp: data.timestamp,
-    status: data.status as "waiting" | "called" | "seated" | "left",
-    called_at: data.called_at ? new Date(data.called_at).getTime() : null,
-    priority:
-      (data.preferences as unknown as Preferences).pregnant ||
-      (data.preferences as unknown as Preferences).elderly ||
-      (data.preferences as unknown as Preferences).disabled ||
-      (data.preferences as unknown as Preferences).infant,
+    status: data.status,
+    calledAt: data.called_at ? new Date(data.called_at).getTime() : undefined,
+    priority: data.preferences.pregnant || data.preferences.elderly || 
+              data.preferences.disabled || data.preferences.infant,
   };
 
-  return customer;
+  return updatedCustomer;
 }

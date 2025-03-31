@@ -3,7 +3,6 @@
 import { 
   addCustomer, 
   updateCustomerStatus, 
-  callCustomer, 
   removeCustomer, 
   updateCustomerInfo 
 } from "./waitingQueue/operations";
@@ -13,7 +12,6 @@ import { fetchQueueFromDatabase, fetchDailyStatistics } from "./waitingQueue/dat
 export {
   addCustomer,
   updateCustomerStatus,
-  callCustomer,
   removeCustomer,
   updateCustomerInfo,
   subscribeToQueueChanges,

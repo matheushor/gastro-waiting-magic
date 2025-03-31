@@ -1,17 +1,21 @@
 
 import { supabase } from "../../../integrations/supabase/client";
 
-// Remove customer from the database
-export const removeCustomerFromDatabase = async (id: string): Promise<void> => {
-  try {
-    const { error } = await supabase
-      .from("waiting_customers")
-      .delete()
-      .eq("id", id);
-    
-    if (error) throw error;
-  } catch (error) {
-    console.error("Error removing customer from database:", error);
+/**
+ * Remove a customer from the waiting queue
+ * @param id Customer ID to remove
+ * @returns Promise<void>
+ */
+export async function removeCustomer(id: string): Promise<void> {
+  if (!id) return;
+
+  const { error } = await supabase
+    .from("customers")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("Error removing customer:", error);
     throw error;
   }
-};
+}
