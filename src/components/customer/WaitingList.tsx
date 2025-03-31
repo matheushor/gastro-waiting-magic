@@ -12,10 +12,9 @@ import { Badge } from "@/components/ui/badge";
 interface WaitingListProps {
   customers: Customer[];
   onLeaveQueue: (id: string) => void;
-  userPhoneNumber: string;
 }
 
-const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue, userPhoneNumber }) => {
+const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue }) => {
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [confirmPhone, setConfirmPhone] = useState("");
@@ -45,10 +44,6 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue, user
       customer.position = undefined;
     }
   });
-
-  // Encontre o cliente do usuário atual usando o número de telefone
-  const userCustomer = sortedCustomers.find(c => c.phone === userPhoneNumber);
-  const userPosition = userCustomer?.position;
 
   const handleLeaveQueueClick = (customer: Customer) => {
     setSelectedCustomer(customer);
@@ -167,102 +162,77 @@ const WaitingList: React.FC<WaitingListProps> = ({ customers, onLeaveQueue, user
               </Badge>
             )}
           </div>
-          
-          {userPosition !== undefined && (
-            <Badge variant="outline" className="bg-blue-100 border-gastro-blue text-gastro-blue flex items-center gap-1 px-3 py-1">
-              <User className="h-3 w-3 mr-1" />
-              {userPosition === 0 
-                ? "Você está sendo chamado!" 
-                : `Sua posição: ${userPosition}º`}
-            </Badge>
-          )}
         </div>
         
         <div className="space-y-3">
-          {sortedCustomers.map((customer) => {
-            const isUserCustomer = customer.phone === userPhoneNumber;
-            
-            return (
-              <div 
-                key={customer.id} 
-                className={`border rounded-lg p-4 relative transition-all hover:shadow-md ${
-                  isUserCustomer 
-                    ? "border-gastro-blue bg-blue-50/50"
-                    : customer.status === "called" 
-                      ? "border-gastro-orange bg-orange-50" 
-                      : customer.priority
-                        ? "border-gastro-orange/30 bg-orange-50/20"
-                        : "border-gastro-lightGray hover:border-gastro-blue"
-                }`}
-              >
-                {customer.status === "called" && (
-                  <div className="absolute -top-2 -right-2 bg-gastro-orange text-white text-xs px-2 py-1 rounded-full animate-pulse-slow font-bold flex items-center gap-1">
-                    <ShieldAlert className="h-3 w-3" />
-                    Chamando
-                  </div>
-                )}
-                
-                {customer.priority && customer.status === "waiting" && (
-                  <div className="absolute -top-2 -right-2 bg-gastro-orange/80 text-white text-xs px-2 py-1 rounded-full font-bold flex items-center gap-1">
-                    <ShieldAlert className="h-3 w-3" />
-                    Prioritário
-                  </div>
-                )}
-                
-                {isUserCustomer && (
-                  <div className="absolute -top-2 left-2 bg-gastro-blue text-white text-xs px-3 py-1 rounded-full font-bold">
-                    Você
-                  </div>
-                )}
-                
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h3 className={`font-medium ${isUserCustomer ? "text-gastro-blue" : ""}`}>{customer.name}</h3>
-                    <div className="flex items-center text-sm text-gastro-gray gap-2 mt-1">
-                      <span className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {customer.partySize} {customer.partySize > 1 ? 'pessoas' : 'pessoa'}
+          {sortedCustomers.map((customer) => (
+            <div 
+              key={customer.id} 
+              className={`border rounded-lg p-4 relative transition-all hover:shadow-md ${
+                customer.status === "called" 
+                  ? "border-gastro-orange bg-orange-50" 
+                  : customer.priority
+                    ? "border-gastro-orange/30 bg-orange-50/20"
+                    : "border-gastro-lightGray hover:border-gastro-blue"
+              }`}
+            >
+              {customer.status === "called" && (
+                <div className="absolute -top-2 -right-2 bg-gastro-orange text-white text-xs px-2 py-1 rounded-full animate-pulse-slow font-bold flex items-center gap-1">
+                  <ShieldAlert className="h-3 w-3" />
+                  Chamando
+                </div>
+              )}
+              
+              {customer.priority && customer.status === "waiting" && (
+                <div className="absolute -top-2 -right-2 bg-gastro-orange/80 text-white text-xs px-2 py-1 rounded-full font-bold flex items-center gap-1">
+                  <ShieldAlert className="h-3 w-3" />
+                  Prioritário
+                </div>
+              )}
+              
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <h3 className="font-medium text-gastro-blue">{customer.name}</h3>
+                  <div className="flex items-center text-sm text-gastro-gray gap-2 mt-1">
+                    <span className="flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      {customer.partySize} {customer.partySize > 1 ? 'pessoas' : 'pessoa'}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-gastro-blue">
+                        {formatWaitingTime(customer.timestamp)}
                       </span>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-gastro-blue">
-                          {formatWaitingTime(customer.timestamp)}
-                        </span>
-                      </div>
                     </div>
                   </div>
-                  
-                  {customer.position !== undefined && (
-                    <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                      isUserCustomer
-                        ? "bg-gastro-blue text-white"
-                        : customer.status === "called" 
-                          ? "bg-gastro-orange text-white" 
-                          : customer.priority
-                            ? "bg-gastro-orange/80 text-white"
-                            : "bg-gastro-blue text-white"
-                    }`}>
-                      {customer.status === "called" ? "0" : customer.position}
-                    </div>
-                  )}
                 </div>
                 
-                <div className="mb-3">
-                  {renderPreferences(customer)}
-                </div>
-                
-                {isUserCustomer && (
-                  <button 
-                    onClick={() => handleLeaveQueueClick(customer)}
-                    className="text-red-500 text-sm flex items-center hover:text-red-700 transition-colors"
-                  >
-                    <X className="h-3 w-3 mr-1" />
-                    Sair da fila
-                  </button>
+                {customer.position !== undefined && (
+                  <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                    customer.status === "called" 
+                      ? "bg-gastro-orange text-white" 
+                      : customer.priority
+                        ? "bg-gastro-orange/80 text-white"
+                        : "bg-gastro-blue text-white"
+                  }`}>
+                    {customer.status === "called" ? "0" : customer.position}
+                  </div>
                 )}
               </div>
-            );
-          })}
+              
+              <div className="mb-3">
+                {renderPreferences(customer)}
+              </div>
+              
+              <button 
+                onClick={() => handleLeaveQueueClick(customer)}
+                className="text-red-500 text-sm flex items-center hover:text-red-700 transition-colors"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Sair da fila
+              </button>
+            </div>
+          ))}
         </div>
         
         {waitingCount > 0 && (

@@ -6,14 +6,7 @@ import { Customer, WaitingQueueState } from "@/types";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { Home } from "lucide-react";
-import { 
-  subscribeToQueueChanges, 
-  updateCustomerStatus, 
-  removeCustomer, 
-  addCustomer, 
-  updateCustomer,
-  calculateAverageWaitTime
-} from "@/services/waitingQueueService";
+import { subscribeToQueueChanges, updateCustomerStatus, removeCustomer, addCustomer } from "@/services/waitingQueueService";
 
 const Admin = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -128,19 +121,20 @@ const Admin = () => {
     }
   };
 
-  const handleUpdateCustomer = async (customer: Customer) => {
-    try {
-      await updateCustomer(customer);
-      toast.success("Cliente atualizado com sucesso!");
-    } catch (error) {
-      console.error("Erro ao atualizar cliente:", error);
-      toast.error("Erro ao atualizar cliente. Tente novamente.");
+  // Calcula o tempo médio de espera atual
+  const calculateAverageWaitTime = () => {
+    const waitingCustomers = queueState.customers.filter(c => c.status === 'waiting');
+    if (waitingCustomers.length <= 1) return null;
+    
+    const timestamps = waitingCustomers.map(c => c.timestamp).sort((a, b) => a - b);
+    let totalDiff = 0;
+    
+    for (let i = 1; i < timestamps.length; i++) {
+      totalDiff += timestamps[i] - timestamps[i-1];
     }
-  };
-
-  // Calcula o tempo médio de espera atual usando o método atualizado
-  const getAverageWaitTime = () => {
-    return calculateAverageWaitTime(queueState.customers);
+    
+    const avgDiffMs = totalDiff / (timestamps.length - 1);
+    return Math.ceil(avgDiffMs / 60000);
   };
 
   return (
@@ -154,15 +148,14 @@ const Admin = () => {
           customers={queueState.customers}
           onCallNext={handleCallNext}
           onRemoveCustomer={handleRemoveCustomer}
-          onFinishServing={handleFinishServing}
-          onUpdateCustomer={handleUpdateCustomer}
           onLogout={handleLogout}
+          onFinishServing={handleFinishServing}
           currentlyServing={queueState.currentlyServing}
           calledHistory={calledHistory}
           activeTab={activeTab}
           onChangeTab={setActiveTab}
           queueCounts={queueCounts}
-          avgWaitTime={getAverageWaitTime()}
+          avgWaitTime={calculateAverageWaitTime()}
           onRegisterCustomer={handleRegisterCustomer}
         />
       )}

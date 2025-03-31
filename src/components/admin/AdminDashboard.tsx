@@ -1,23 +1,19 @@
 
-import React, { useState, useEffect } from "react";
-import { Customer, DailyStatistics } from "@/types";
+import React, { useState } from "react";
+import { Customer } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BellRing, Users, Clock, LogOut, UserCheck, X, History, Star, User, Coffee, UserPlus, Edit, BarChart } from "lucide-react";
+import { BellRing, Users, Clock, LogOut, UserCheck, X, History, Star, User, Coffee, UserPlus } from "lucide-react";
 import { formatWaitingTime } from "@/utils/geoUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import AdminRegistrationForm from "./AdminRegistrationForm";
-import EditCustomerDialog from "./EditCustomerDialog";
-import { fetchDailyStatistics } from "@/services/waitingQueue/database";
-import { calculateAverageWaitTime } from "@/services/waitingQueue/operations";
 
 interface AdminDashboardProps {
   customers: Customer[];
   onCallNext: () => void;
   onRemoveCustomer: (id: string) => void;
   onFinishServing: (id: string) => void;
-  onUpdateCustomer: (customer: Customer) => void;
   onLogout: () => void;
   currentlyServing: Customer | null;
   calledHistory: Customer[];
@@ -33,7 +29,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onCallNext,
   onRemoveCustomer,
   onFinishServing,
-  onUpdateCustomer,
   onLogout,
   currentlyServing,
   calledHistory,
@@ -45,20 +40,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 }) => {
   const [confirmDialog, setConfirmDialog] = useState(false);
   const [customerToRemove, setCustomerToRemove] = useState<Customer | null>(null);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [customerToEdit, setCustomerToEdit] = useState<Customer | null>(null);
-  const [dailyStats, setDailyStats] = useState<DailyStatistics[]>([]);
-
-  // Fetch daily statistics when viewing history tab
-  useEffect(() => {
-    if (activeTab === 'history') {
-      const getDailyStats = async () => {
-        const stats = await fetchDailyStatistics();
-        setDailyStats(stats);
-      };
-      getDailyStats();
-    }
-  }, [activeTab]);
 
   // Count waiting customers
   const waitingCount = customers.filter(c => c.status === "waiting").length;
@@ -76,9 +57,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     )
     .sort((a, b) => a.timestamp - b.timestamp);
 
-  // Calculate actual wait time based on timestamp and calledAt
-  const realAvgWaitTime = calculateAverageWaitTime(customers);
-
   const handleRemoveClick = (customer: Customer) => {
     setCustomerToRemove(customer);
     setConfirmDialog(true);
@@ -89,17 +67,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       onRemoveCustomer(customerToRemove.id);
       setConfirmDialog(false);
     }
-  };
-
-  const handleEditClick = (customer: Customer) => {
-    setCustomerToEdit(customer);
-    setEditDialogOpen(true);
-  };
-
-  const handleSaveEdit = (updatedCustomer: Customer) => {
-    onUpdateCustomer(updatedCustomer);
-    setEditDialogOpen(false);
-    toast.success("Cliente atualizado com sucesso!");
   };
 
   const renderPreferences = (customer: Customer) => {
@@ -151,9 +118,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <Clock className="h-10 w-10 mr-4 text-gastro-orange" />
           <div>
             <h2 className="text-3xl font-bold text-gastro-blue">
-              {realAvgWaitTime ? `${realAvgWaitTime}m` : "-"}
+              {avgWaitTime ? `${avgWaitTime}m` : "-"}
             </h2>
-            <p className="text-sm text-gastro-gray">Tempo médio de espera</p>
+            <p className="text-sm text-gastro-gray">Tempo médio por cliente</p>
           </div>
         </div>
         
@@ -192,15 +159,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => handleEditClick(currentlyServing)}
-                  className="flex items-center gap-1 border-blue-500 text-blue-600 hover:bg-blue-50"
-                >
-                  <Edit className="h-4 w-4" />
-                  <span>Editar</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
                   onClick={() => handleFinishServingClick(currentlyServing)}
                   className="flex items-center gap-1 border-green-500 text-green-600 hover:bg-green-50"
                 >
@@ -223,7 +181,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       <Tabs defaultValue="waiting" value={activeTab} onValueChange={(val) => onChangeTab(val as any)}>
-        <TabsList className="grid grid-cols-5 mb-4 overflow-x-auto flex-nowrap">
+        <TabsList className="grid grid-cols-5 mb-4">
           <TabsTrigger value="waiting" className="flex items-center gap-1">
             <Users className="h-4 w-4" />
             <span>Aguardando</span>
@@ -261,7 +219,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   customer={customer} 
                   position={index + 1}
                   onRemove={() => handleRemoveClick(customer)}
-                  onEdit={() => handleEditClick(customer)}
                 />
               ))}
             </div>
@@ -283,7 +240,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 position={0}
                 onRemove={() => handleRemoveClick(currentlyServing)}
                 onFinishServing={() => handleFinishServingClick(currentlyServing)}
-                onEdit={() => handleEditClick(currentlyServing)}
               />
             </div>
           )}
@@ -304,7 +260,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   customer={customer} 
                   position={index + 1}
                   onRemove={() => handleRemoveClick(customer)}
-                  onEdit={() => handleEditClick(customer)}
                   isPriority
                 />
               ))}
@@ -316,31 +271,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <h2 className="text-xl font-bold text-gastro-blue mb-3">Histórico do Dia</h2>
           
           <div className="bg-white p-4 rounded-lg shadow-md mb-4">
-            <h3 className="font-semibold text-gastro-blue mb-3 flex items-center gap-2">
-              <BarChart className="h-5 w-5" />
-              Estatísticas da Fila
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                <h4 className="text-sm font-medium text-gastro-blue mb-1">Clientes Hoje</h4>
-                <p className="text-2xl font-bold text-gastro-blue">
-                  {dailyStats[0]?.groups_count || 0} <span className="text-sm font-normal text-gastro-gray">grupos</span>
-                </p>
-                <p className="text-sm text-gastro-gray">
-                  ({dailyStats[0]?.people_count || 0} pessoas no total)
-                </p>
-              </div>
-              <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
-                <h4 className="text-sm font-medium text-gastro-orange mb-1">Tempo Médio de Espera</h4>
-                <p className="text-2xl font-bold text-gastro-orange">
-                  {realAvgWaitTime ? `${realAvgWaitTime}m` : "-"}
-                </p>
-                <p className="text-sm text-gastro-gray">
-                  Baseado em {customers.filter(c => c.status === "called" && c.calledAt).length} atendimentos
-                </p>
-              </div>
-            </div>
-            
+            <h3 className="font-semibold text-gastro-blue mb-3">Estatísticas da Fila</h3>
             <div className="relative h-40">
               {queueCounts.length > 0 ? (
                 <svg className="w-full h-full" viewBox={`0 0 ${queueCounts.length * 15} 100`} preserveAspectRatio="none">
@@ -399,8 +330,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
           
-          <h3 className="font-semibold text-gastro-blue mb-3">Clientes Atendidos Hoje</h3>
-          
           {calledHistory.length === 0 ? (
             <div className="bg-white p-6 rounded-lg shadow-md text-center">
               <p className="text-gastro-gray">Nenhum histórico de atendimento disponível hoje.</p>
@@ -419,44 +348,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         •
                         <span className="mx-2">Status: {customer.status === 'seated' ? 'Atendido' : 'Chamado'}</span>
                       </div>
-                      <div className="mt-2">
-                        {renderPreferences(customer)}
-                      </div>
                     </div>
                   </div>
                 </div>
               ))}
-            </div>
-          )}
-          
-          <h3 className="font-semibold text-gastro-blue my-3">Histórico dos Últimos Dias</h3>
-          
-          {dailyStats.length === 0 ? (
-            <div className="bg-white p-6 rounded-lg shadow-md text-center">
-              <p className="text-gastro-gray">Nenhuma estatística disponível.</p>
-            </div>
-          ) : (
-            <div className="bg-white p-4 rounded-lg shadow-md">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gastro-gray uppercase tracking-wider">Data</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gastro-gray uppercase tracking-wider">Grupos</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gastro-gray uppercase tracking-wider">Pessoas</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {dailyStats.map((stat, index) => (
-                      <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-blue-50'}>
-                        <td className="px-4 py-2 text-sm text-gastro-gray">{new Date(stat.date).toLocaleDateString('pt-BR')}</td>
-                        <td className="px-4 py-2 text-sm font-medium text-gastro-blue">{stat.groups_count}</td>
-                        <td className="px-4 py-2 text-sm text-gastro-gray">{stat.people_count}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
             </div>
           )}
         </TabsContent>
@@ -485,15 +380,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
-      {customerToEdit && (
-        <EditCustomerDialog 
-          customer={customerToEdit}
-          open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
-          onSave={handleSaveEdit}
-        />
-      )}
     </div>
   );
 };
@@ -503,14 +389,12 @@ const CustomerCard = ({
   customer, 
   position, 
   onRemove, 
-  onEdit,
   onFinishServing, 
   isPriority 
 }: { 
   customer: Customer;
   position: number;
   onRemove: () => void;
-  onEdit: () => void;
   onFinishServing?: () => void;
   isPriority?: boolean;
 }) => {
@@ -566,14 +450,6 @@ const CustomerCard = ({
         </div>
         
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={onEdit}
-            className="border-blue-500 text-blue-600 hover:bg-blue-50"
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
           {onFinishServing && (
             <Button 
               variant="outline" 
