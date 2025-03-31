@@ -5,32 +5,25 @@ import { getCurrentQueue, setCurrentQueue } from "./storage";
 
 // Add a customer to the waiting queue
 export const addCustomer = async (customer: Customer): Promise<void> => {
-  // Create a proper UUID format for database
-  const supabaseCustomer = {
-    ...customer,
-    // Use Supabase's UUID generation on the server side
-    party_size: customer.partySize,
-    preferences: customer.preferences as any, // Required type assertion for Supabase
-  };
-  
-  const currentQueue = getCurrentQueue();
-  
   try {
     // Try to sync with Supabase first
     const { data, error } = await supabase
       .from("waiting_customers")
       .insert({
-        name: supabaseCustomer.name,
-        phone: supabaseCustomer.phone,
-        party_size: supabaseCustomer.party_size,
-        preferences: supabaseCustomer.preferences,
-        status: supabaseCustomer.status,
-        timestamp: supabaseCustomer.timestamp,
+        name: customer.name,
+        phone: customer.phone,
+        party_size: customer.partySize,
+        preferences: customer.preferences,
+        status: customer.status,
+        timestamp: customer.timestamp,
       })
       .select()
       .single();
       
-    if (error) throw error;
+    if (error) {
+      console.error("Error adding customer to database:", error);
+      throw error;
+    }
     
     // If successful, use the returned data with the server-generated ID
     if (data) {
@@ -39,6 +32,7 @@ export const addCustomer = async (customer: Customer): Promise<void> => {
         id: data.id, // Use the server-generated UUID
       };
       
+      const currentQueue = getCurrentQueue();
       setCurrentQueue({
         ...currentQueue,
         customers: [...currentQueue.customers, newCustomer],
@@ -46,13 +40,12 @@ export const addCustomer = async (customer: Customer): Promise<void> => {
       
       // Increment daily statistics
       await incrementDailyStats(customer.partySize);
-      
-      return;
     }
   } catch (error) {
     console.warn("Failed to sync with database, using local storage instead", error);
     
     // Fallback to local storage if Supabase fails
+    const currentQueue = getCurrentQueue();
     setCurrentQueue({
       ...currentQueue,
       customers: [...currentQueue.customers, customer],
@@ -77,15 +70,21 @@ export const updateCustomerStatus = async (id: string, status: "waiting" | "call
   
   try {
     // Try to sync with Supabase if available
+    const updateData: any = { status };
+    
+    if (status === "called") {
+      updateData.called_at = new Date().toISOString();
+    }
+    
     const { error } = await supabase
       .from("waiting_customers")
-      .update({ 
-        status,
-        called_at: status === "called" ? new Date().toISOString() : null,
-      })
+      .update(updateData)
       .eq("id", id);
       
-    if (error) throw error;
+    if (error) {
+      console.error("Error updating customer status in database:", error);
+      throw error;
+    }
     
   } catch (error) {
     console.warn("Failed to sync with database, using local storage instead", error);
@@ -102,44 +101,12 @@ export const updateCustomerStatus = async (id: string, status: "waiting" | "call
 
 // Call a customer from the waiting queue
 export const callCustomer = async (id: string): Promise<void> => {
-  const currentQueue = getCurrentQueue();
-  const customerIndex = currentQueue.customers.findIndex((c) => c.id === id);
-  
-  if (customerIndex === -1) return;
-  
-  const updatedCustomers = [...currentQueue.customers];
-  updatedCustomers[customerIndex] = {
-    ...updatedCustomers[customerIndex],
-    status: "called",
-  };
-  
-  try {
-    // Try to sync with Supabase if available
-    const { error } = await supabase
-      .from("waiting_customers")
-      .update({ 
-        status: "called",
-        called_at: new Date().toISOString()
-      })
-      .eq("id", id);
-      
-    if (error) throw error;
-    
-  } catch (error) {
-    console.warn("Failed to sync with database, using local storage instead", error);
-  }
-  
-  setCurrentQueue({
-    ...currentQueue,
-    customers: updatedCustomers,
-    currentlyServing: updatedCustomers[customerIndex],
-  });
+  await updateCustomerStatus(id, "called");
 };
 
 // Remove a customer from the waiting queue
 export const removeCustomer = async (id: string): Promise<void> => {
   const currentQueue = getCurrentQueue();
-  const customer = currentQueue.customers.find(c => c.id === id);
   
   try {
     // Try to sync with Supabase if available
@@ -148,7 +115,10 @@ export const removeCustomer = async (id: string): Promise<void> => {
       .delete()
       .eq("id", id);
       
-    if (error) throw error;
+    if (error) {
+      console.error("Error removing customer from database:", error);
+      throw error;
+    }
     
   } catch (error) {
     console.warn("Failed to sync with database, using local storage instead", error);
@@ -173,7 +143,10 @@ const incrementDailyStats = async (partySize: number): Promise<void> => {
       .eq("date", today)
       .maybeSingle();
     
-    if (fetchError) throw fetchError;
+    if (fetchError) {
+      console.error("Error checking for existing daily statistics:", fetchError);
+      throw fetchError;
+    }
     
     if (existingData) {
       // Update existing record
@@ -186,7 +159,10 @@ const incrementDailyStats = async (partySize: number): Promise<void> => {
         })
         .eq("id", existingData.id);
       
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error("Error updating daily statistics:", updateError);
+        throw updateError;
+      }
     } else {
       // Insert new record
       const { error: insertError } = await supabase
@@ -197,7 +173,10 @@ const incrementDailyStats = async (partySize: number): Promise<void> => {
           people_count: partySize
         });
       
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error("Error inserting daily statistics:", insertError);
+        throw insertError;
+      }
     }
   } catch (error) {
     console.error("Failed to update daily statistics:", error);

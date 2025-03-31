@@ -8,9 +8,13 @@ export const fetchQueueFromDatabase = async (): Promise<void> => {
   try {
     const { data, error } = await supabase
       .from("waiting_customers")
-      .select("*");
+      .select("*")
+      .order("timestamp", { ascending: true });
       
-    if (error) throw error;
+    if (error) {
+      console.error("Error fetching queue:", error);
+      throw error;
+    }
     
     if (data) {
       // Transform the data to match our WaitingQueueState structure
@@ -29,6 +33,7 @@ export const fetchQueueFromDatabase = async (): Promise<void> => {
       setCurrentQueue({
         ...currentQueue,
         customers,
+        currentlyServing: customers.find(c => c.status === "called") || null
       });
     }
   } catch (error) {
@@ -47,7 +52,10 @@ export const fetchDailyStatistics = async (): Promise<{ groups: number, people: 
       .eq("date", today)
       .maybeSingle();
     
-    if (error) throw error;
+    if (error) {
+      console.error("Error fetching daily statistics:", error);
+      throw error;
+    }
     
     if (data) {
       return {

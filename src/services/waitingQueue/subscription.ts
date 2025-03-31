@@ -25,7 +25,8 @@ export const subscribeToQueueChanges = (
       .channel('public:waiting_customers')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'waiting_customers' }, 
-        async () => {
+        async (payload) => {
+          console.log("Received real-time update:", payload);
           await fetchQueueFromDatabase();
           callback({ ...getCurrentQueue() });
         }
@@ -44,10 +45,8 @@ export const subscribeToQueueChanges = (
       .channel('public:daily_statistics')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'daily_statistics' }, 
-        () => {
-          // We don't need to do anything here, the Admin page will
-          // fetch statistics when needed
-          console.log("Daily statistics updated");
+        (payload) => {
+          console.log("Daily statistics updated:", payload);
         }
       )
       .subscribe();
@@ -60,17 +59,19 @@ export const subscribeToQueueChanges = (
       }
       
       if (supabaseSubscriptionActive) {
-        supabase.removeChannel(channel);
-        supabase.removeChannel(statsChannel);
+        channel.unsubscribe();
+        statsChannel.unsubscribe();
       }
     };
   } catch (error) {
-    console.warn("Failed to set up Supabase connection, using local updates only", error);
+    console.error("Failed to set up Supabase connection:", error);
     
     // If we reach here, we're using local updates only
     // Set up a polling mechanism as a fallback
     const pollingInterval = setInterval(() => {
-      callback({ ...getCurrentQueue() });
+      fetchQueueFromDatabase().then(() => {
+        callback({ ...getCurrentQueue() });
+      });
     }, 5000);
     
     // Return unsubscribe function for local updates
