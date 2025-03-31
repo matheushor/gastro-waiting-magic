@@ -1,4 +1,3 @@
-
 import { Customer } from "../../types";
 import { supabase } from "../../integrations/supabase/client";
 import { getCurrentQueue, setCurrentQueue } from "./storage";
@@ -38,12 +37,11 @@ export const addCustomer = async (customer: Customer): Promise<void> => {
     // Increment daily statistics
     const today = new Date().toISOString().split('T')[0];
     
-    // Corrigindo o problema: usando o tipo correto para funções RPC
     const { error: statsError } = await supabase.rpc('increment_daily_stats', {
       stats_date: today,
       group_increment: 1,
       people_increment: supabaseCustomer.party_size
-    }) as unknown as { error: Error | null };
+    }) as { error: Error | null };
     
     if (statsError) throw statsError;
     

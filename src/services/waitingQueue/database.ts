@@ -40,11 +40,10 @@ export const fetchQueueFromDatabase = async (): Promise<void> => {
 // Fetch daily statistics from the database
 export const fetchDailyStatistics = async (limit = 7): Promise<{ date: string, groups_count: number, people_count: number }[]> => {
   try {
-    // Corrigindo o problema: usando o tipo correto para funcões RPC
     const { data, error } = await supabase
-      .rpc('get_daily_statistics', { limit_param: limit }) as unknown as {
-        data: { date: string, groups_count: number, people_count: number }[] | null,
-        error: Error | null
+      .rpc('get_daily_statistics', { limit_param: limit }) as { 
+        data: { date: string, groups_count: number, people_count: number }[] | null, 
+        error: Error | null 
       };
       
     if (error) throw error;
