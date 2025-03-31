@@ -32,10 +32,10 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-    dedupe: ['react', 'react-dom', '@supabase/supabase-js']
+    dedupe: ['react', 'react-dom', '@supabase/supabase-js', 'acorn'],
   },
   optimizeDeps: {
-    force: true, // Force reoptimization of dependencies
-    include: ['@supabase/supabase-js']
+    force: true,
+    include: ['@supabase/supabase-js', 'acorn']
   }
 }));
