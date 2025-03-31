@@ -1,10 +1,12 @@
 
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
 import { Customer, Preferences } from "@/types";
-import { AlertCircle } from "lucide-react";
+import { Checkbox } from "../ui/checkbox";
+import { Label } from "../ui/label";
+import { toast } from "sonner";
+import { Shield, Heart, User, Clock, Users, Home, Wind } from "lucide-react";
 
 interface RegistrationFormProps {
   onRegister: (customer: Customer) => void;
@@ -21,60 +23,36 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
     infant: false,
     withDog: false,
     indoor: false,
-    outdoor: false,
+    outdoor: false
   });
 
-  const [errors, setErrors] = useState<{
-    name?: string;
-    phone?: string;
-    partySize?: string;
-    preferences?: string;
-  }>({});
-
-  const validateForm = (): boolean => {
-    const newErrors: {
-      name?: string;
-      phone?: string;
-      partySize?: string;
-      preferences?: string;
-    } = {};
-
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!name.trim()) {
-      newErrors.name = "Nome é obrigatório";
+      toast.error("Por favor, informe seu nome");
+      return;
     }
-
-    if (phone.length < 10) {
-      newErrors.phone = "Telefone inválido";
+    
+    if (!phone.trim()) {
+      toast.error("Por favor, informe seu telefone para contato");
+      return;
     }
-
+    
     if (partySize < 1) {
-      newErrors.partySize = "Deve haver pelo menos 1 pessoa";
-    }
-
-    if (!preferences.indoor && !preferences.outdoor) {
-      newErrors.preferences = "Selecione ao menos uma opção de acomodação";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!validateForm()) {
+      toast.error("O número de pessoas deve ser pelo menos 1");
       return;
     }
 
-    // Generate UUID using crypto API instead of uuid package
     const newCustomer: Customer = {
       id: crypto.randomUUID(),
-      name,
-      phone,
+      name: name.trim(),
+      phone: phone.trim(),
       partySize,
       preferences,
       timestamp: Date.now(),
       status: "waiting",
-      priority: preferences.pregnant || preferences.elderly || preferences.disabled || preferences.infant,
+      priority: preferences.pregnant || preferences.elderly || preferences.disabled || preferences.infant
     };
 
     onRegister(newCustomer);
@@ -90,12 +68,11 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
       infant: false,
       withDog: false,
       indoor: false,
-      outdoor: false,
+      outdoor: false
     });
-    setErrors({});
   };
 
-  const togglePreference = (key: keyof Preferences) => {
+  const handlePreferenceChange = (key: keyof Preferences) => {
     setPreferences((prev) => ({
       ...prev,
       [key]: !prev[key],
@@ -103,173 +80,177 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 border border-blue-100">
-      <h2 className="text-xl font-bold text-gastro-blue mb-6">Cadastrar na Fila</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="bg-white p-6 rounded-lg shadow-lg border border-blue-100">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gastro-gray mb-1" htmlFor="name">
-            Nome Completo *
-          </label>
+          <Label htmlFor="name" className="block mb-2 text-sm font-medium text-gastro-gray">
+            Nome
+          </Label>
           <Input
             id="name"
-            type="text"
+            placeholder="Seu nome"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Digite seu nome completo"
-            className={errors.name ? "border-red-500" : ""}
+            className="border-gastro-lightGray"
           />
-          {errors.name && (
-            <p className="text-red-500 text-sm mt-1 flex items-center">
-              <AlertCircle className="h-3 w-3 mr-1" />
-              {errors.name}
-            </p>
-          )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gastro-gray mb-1" htmlFor="phone">
-            Telefone *
-          </label>
+          <Label htmlFor="phone" className="block mb-2 text-sm font-medium text-gastro-gray">
+            Telefone
+          </Label>
           <Input
             id="phone"
-            type="tel"
+            placeholder="DDD + Número (apenas números)"
             value={phone}
             onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-            placeholder="DDD + número (apenas números)"
-            className={errors.phone ? "border-red-500" : ""}
+            className="border-gastro-lightGray"
           />
-          {errors.phone && (
-            <p className="text-red-500 text-sm mt-1 flex items-center">
-              <AlertCircle className="h-3 w-3 mr-1" />
-              {errors.phone}
-            </p>
-          )}
+          <p className="mt-1 text-xs text-gastro-gray">
+            Usaremos para avisar quando sua mesa estiver pronta
+          </p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gastro-gray mb-1" htmlFor="partySize">
-            Número de Pessoas *
-          </label>
-          <Input
-            id="partySize"
-            type="number"
-            min={1}
-            value={partySize}
-            onChange={(e) => setPartySize(parseInt(e.target.value) || 1)}
-            className={errors.partySize ? "border-red-500" : ""}
-          />
-          {errors.partySize && (
-            <p className="text-red-500 text-sm mt-1 flex items-center">
-              <AlertCircle className="h-3 w-3 mr-1" />
-              {errors.partySize}
-            </p>
-          )}
+          <Label htmlFor="partySize" className="block mb-2 text-sm font-medium text-gastro-gray">
+            Número de pessoas
+          </Label>
+          <div className="flex items-center">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setPartySize(Math.max(1, partySize - 1))}
+              className="border-gastro-blue text-gastro-blue"
+            >
+              -
+            </Button>
+            <div className="w-12 text-center font-semibold">{partySize}</div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setPartySize(partySize + 1)}
+              className="border-gastro-blue text-gastro-blue"
+            >
+              +
+            </Button>
+          </div>
         </div>
 
-        <div>
-          <h3 className="text-sm font-medium text-gastro-gray mb-2">Preferências</h3>
+        <div className="space-y-3">
+          <Label className="block text-sm font-medium text-gastro-blue flex items-center">
+            <Shield className="h-4 w-4 mr-2" />
+            Necessidades específicas
+          </Label>
           
-          <div className="space-y-2">
-            <div className="border-b pb-2">
-              <h4 className="text-xs font-medium text-gastro-blue mb-2">Atendimento Prioritário</h4>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="pregnant" 
-                    checked={preferences.pregnant}
-                    onCheckedChange={() => togglePreference("pregnant")}
-                  />
-                  <label htmlFor="pregnant" className="text-sm text-gastro-gray">
-                    Gestante
-                  </label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="elderly" 
-                    checked={preferences.elderly}
-                    onCheckedChange={() => togglePreference("elderly")}
-                  />
-                  <label htmlFor="elderly" className="text-sm text-gastro-gray">
-                    Idoso
-                  </label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="disabled" 
-                    checked={preferences.disabled}
-                    onCheckedChange={() => togglePreference("disabled")}
-                  />
-                  <label htmlFor="disabled" className="text-sm text-gastro-gray">
-                    PCD
-                  </label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="infant" 
-                    checked={preferences.infant}
-                    onCheckedChange={() => togglePreference("infant")}
-                  />
-                  <label htmlFor="infant" className="text-sm text-gastro-gray">
-                    Criança de colo
-                  </label>
-                </div>
-              </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="pregnant" 
+                checked={preferences.pregnant}
+                onCheckedChange={() => handlePreferenceChange("pregnant")}
+              />
+              <Label htmlFor="pregnant" className="text-sm cursor-pointer flex items-center">
+                <Heart className="h-3 w-3 mr-1 text-red-500" />
+                Gestante
+              </Label>
             </div>
             
-            <div>
-              <h4 className="text-xs font-medium text-gastro-blue mb-2">Acomodação *</h4>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="indoor" 
-                    checked={preferences.indoor}
-                    onCheckedChange={() => togglePreference("indoor")}
-                  />
-                  <label htmlFor="indoor" className="text-sm text-gastro-gray">
-                    Mesa interna
-                  </label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="outdoor" 
-                    checked={preferences.outdoor}
-                    onCheckedChange={() => togglePreference("outdoor")}
-                  />
-                  <label htmlFor="outdoor" className="text-sm text-gastro-gray">
-                    Mesa externa
-                  </label>
-                </div>
-                {errors.preferences && (
-                  <p className="text-red-500 text-sm mt-1 flex items-center col-span-2">
-                    <AlertCircle className="h-3 w-3 mr-1" />
-                    {errors.preferences}
-                  </p>
-                )}
-              </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="elderly" 
+                checked={preferences.elderly}
+                onCheckedChange={() => handlePreferenceChange("elderly")}
+              />
+              <Label htmlFor="elderly" className="text-sm cursor-pointer flex items-center">
+                <User className="h-3 w-3 mr-1 text-blue-500" />
+                Idoso
+              </Label>
             </div>
             
-            <div>
-              <h4 className="text-xs font-medium text-gastro-blue mb-2">Outros</h4>
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="withDog" 
-                  checked={preferences.withDog}
-                  onCheckedChange={() => togglePreference("withDog")}
-                />
-                <label htmlFor="withDog" className="text-sm text-gastro-gray">
-                  Com cachorro
-                </label>
-              </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="disabled" 
+                checked={preferences.disabled}
+                onCheckedChange={() => handlePreferenceChange("disabled")}
+              />
+              <Label htmlFor="disabled" className="text-sm cursor-pointer flex items-center">
+                <Heart className="h-3 w-3 mr-1 text-red-500" />
+                PCD
+              </Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="infant" 
+                checked={preferences.infant}
+                onCheckedChange={() => handlePreferenceChange("infant")}
+              />
+              <Label htmlFor="infant" className="text-sm cursor-pointer flex items-center">
+                <User className="h-3 w-3 mr-1 text-blue-500" />
+                Criança de colo
+              </Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="withDog" 
+                checked={preferences.withDog}
+                onCheckedChange={() => handlePreferenceChange("withDog")}
+              />
+              <Label htmlFor="withDog" className="text-sm cursor-pointer">
+                Com cachorro
+              </Label>
             </div>
           </div>
         </div>
 
-        <Button 
-          type="submit" 
-          className="w-full bg-gastro-orange hover:bg-orange-600 text-white py-6 mt-6"
-        >
-          Entrar na Fila
-        </Button>
+        <div className="space-y-3">
+          <Label className="block text-sm font-medium text-gastro-blue flex items-center">
+            <Home className="h-4 w-4 mr-2" />
+            Preferência de mesa
+          </Label>
+          
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="indoor" 
+                checked={preferences.indoor}
+                onCheckedChange={() => handlePreferenceChange("indoor")}
+              />
+              <Label htmlFor="indoor" className="text-sm cursor-pointer flex items-center">
+                <Home className="h-3 w-3 mr-1 text-green-600" />
+                Mesa interna
+              </Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="outdoor" 
+                checked={preferences.outdoor}
+                onCheckedChange={() => handlePreferenceChange("outdoor")}
+              />
+              <Label htmlFor="outdoor" className="text-sm cursor-pointer flex items-center">
+                <Wind className="h-3 w-3 mr-1 text-green-600" />
+                Mesa externa
+              </Label>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-2">
+          <Button 
+            type="submit" 
+            className="w-full bg-gastro-orange hover:bg-orange-600 text-white"
+          >
+            Entrar na Fila
+          </Button>
+        </div>
+        
+        <div className="text-xs text-gastro-gray text-center">
+          <p>Ao entrar na fila, você receberá uma notificação quando sua vez chegar.</p>
+        </div>
       </form>
     </div>
   );

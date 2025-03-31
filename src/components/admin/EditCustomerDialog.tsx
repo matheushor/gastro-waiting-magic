@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { Heart, User, Home, Wind, Shield } from "lucide-react";
 
 interface EditCustomerDialogProps {
   customer: Customer | null;
@@ -89,6 +90,10 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
     }));
   };
 
+  const handlePartySizeChange = (change: number) => {
+    setPartySize(Math.max(1, partySize + change));
+  };
+
   if (!customer) return null;
 
   return (
@@ -121,17 +126,34 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
 
           <div className="space-y-2">
             <Label htmlFor="partySize">Número de pessoas</Label>
-            <Input
-              id="partySize"
-              type="number"
-              min={1}
-              value={partySize}
-              onChange={(e) => setPartySize(parseInt(e.target.value) || 1)}
-            />
+            <div className="flex items-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handlePartySizeChange(-1)}
+                className="border-gastro-blue text-gastro-blue"
+              >
+                -
+              </Button>
+              <div className="w-12 text-center font-semibold">{partySize}</div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handlePartySizeChange(1)}
+                className="border-gastro-blue text-gastro-blue"
+              >
+                +
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Preferências</Label>
+            <Label className="block text-sm font-medium text-gastro-blue flex items-center">
+              <Shield className="h-4 w-4 mr-2" />
+              Necessidades específicas
+            </Label>
             <div className="grid grid-cols-2 gap-2">
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -139,7 +161,10 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
                   checked={preferences.pregnant}
                   onCheckedChange={() => togglePreference("pregnant")}
                 />
-                <Label htmlFor="pregnant" className="text-sm">Gestante</Label>
+                <Label htmlFor="pregnant" className="text-sm cursor-pointer flex items-center">
+                  <Heart className="h-3 w-3 mr-1 text-red-500" />
+                  Gestante
+                </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -147,7 +172,10 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
                   checked={preferences.elderly}
                   onCheckedChange={() => togglePreference("elderly")}
                 />
-                <Label htmlFor="elderly" className="text-sm">Idoso</Label>
+                <Label htmlFor="elderly" className="text-sm cursor-pointer flex items-center">
+                  <User className="h-3 w-3 mr-1 text-blue-500" />
+                  Idoso
+                </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -155,7 +183,10 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
                   checked={preferences.disabled}
                   onCheckedChange={() => togglePreference("disabled")}
                 />
-                <Label htmlFor="disabled" className="text-sm">PCD</Label>
+                <Label htmlFor="disabled" className="text-sm cursor-pointer flex items-center">
+                  <Heart className="h-3 w-3 mr-1 text-red-500" />
+                  PCD
+                </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -163,7 +194,10 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
                   checked={preferences.infant}
                   onCheckedChange={() => togglePreference("infant")}
                 />
-                <Label htmlFor="infant" className="text-sm">Criança de colo</Label>
+                <Label htmlFor="infant" className="text-sm cursor-pointer flex items-center">
+                  <User className="h-3 w-3 mr-1 text-blue-500" />
+                  Criança de colo
+                </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -171,15 +205,29 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
                   checked={preferences.withDog}
                   onCheckedChange={() => togglePreference("withDog")}
                 />
-                <Label htmlFor="withDog" className="text-sm">Com cachorro</Label>
+                <Label htmlFor="withDog" className="text-sm cursor-pointer">
+                  Com cachorro
+                </Label>
               </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="block text-sm font-medium text-gastro-blue flex items-center">
+              <Home className="h-4 w-4 mr-2" />
+              Preferência de mesa
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="indoor"
                   checked={preferences.indoor}
                   onCheckedChange={() => togglePreference("indoor")}
                 />
-                <Label htmlFor="indoor" className="text-sm">Mesa interna</Label>
+                <Label htmlFor="indoor" className="text-sm cursor-pointer flex items-center">
+                  <Home className="h-3 w-3 mr-1 text-green-600" />
+                  Mesa interna
+                </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -187,7 +235,10 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
                   checked={preferences.outdoor}
                   onCheckedChange={() => togglePreference("outdoor")}
                 />
-                <Label htmlFor="outdoor" className="text-sm">Mesa externa</Label>
+                <Label htmlFor="outdoor" className="text-sm cursor-pointer flex items-center">
+                  <Wind className="h-3 w-3 mr-1 text-green-600" />
+                  Mesa externa
+                </Label>
               </div>
             </div>
           </div>
