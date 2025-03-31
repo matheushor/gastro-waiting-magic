@@ -31,6 +31,9 @@ export default defineConfig(({ mode }) => ({
       external: ["uuid"],
     },
     sourcemap: true,
+    commonjsOptions: {
+      transformMixedEsModules: true, // Add this to help with mixed ES modules
+    }
   },
   esbuild: {
     logOverride: { 'this-is-undefined-in-esm': 'silent' }
@@ -44,6 +47,7 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-    preserveSymlinks: true, // Add this to help with module resolution
-  },
+    preserveSymlinks: true, // Help with module resolution
+    dedupe: ['react', 'react-dom'], // Deduplicate React to avoid multiple instances
+  }
 }));

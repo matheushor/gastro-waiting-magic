@@ -20,7 +20,7 @@ declare module 'd3-shape' {
   export function area(): any;
   export function arc(): any;
   export function pie(): any;
-  export const curveLinear: any; // Fix: changed from function to const
+  export const curveLinear: any; // Fixed from function to const
   // Add any other d3-shape functions you're using
 }
 
@@ -33,6 +33,13 @@ declare module 'recharts' {
     className?: string;
     style?: React.CSSProperties;
     children?: ReactNode;
+  }
+  
+  // Add LegendProps interface
+  export interface LegendProps extends BaseProps {
+    payload?: any[];
+    verticalAlign?: string;
+    // Add other necessary properties
   }
   
   // Export chart components
