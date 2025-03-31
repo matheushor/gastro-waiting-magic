@@ -1,3 +1,4 @@
+
 import { Customer } from "../../types";
 import { supabase } from "../../integrations/supabase/client";
 import { getCurrentQueue, setCurrentQueue } from "./storage";
