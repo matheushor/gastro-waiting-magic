@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     force: true, // Force dependency optimization
     exclude: ["uuid"], // Explicitly exclude uuid to prevent it from being processed
-    include: ["react", "react-dom", "d3-scale", "d3-shape", "recharts"], // Include problematic dependencies
+    include: ["react", "react-dom", "d3-scale", "d3-shape"], // Include problematic dependencies but don't include recharts here
   },
   build: {
     outDir: "dist",
