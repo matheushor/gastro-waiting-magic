@@ -35,9 +35,62 @@ export const addCustomer = async (customer: Customer): Promise<void> => {
       
     if (error) throw error;
     
+    // Increment daily statistics
+    const today = new Date().toISOString().split('T')[0];
+    await supabase.rpc('increment_daily_stats', {
+      stats_date: today,
+      group_increment: 1,
+      people_increment: supabaseCustomer.party_size
+    });
+    
   } catch (error) {
     console.warn("Failed to sync with database, using local storage instead", error);
   }
+};
+
+// Update a customer's info in the waiting queue
+export const updateCustomerInfo = async (id: string, updatedCustomer: Partial<Customer>): Promise<Customer> => {
+  const currentQueue = getCurrentQueue();
+  const customerIndex = currentQueue.customers.findIndex((c) => c.id === id);
+  
+  if (customerIndex === -1) throw new Error("Customer not found");
+  
+  const updatedCustomers = [...currentQueue.customers];
+  updatedCustomers[customerIndex] = {
+    ...updatedCustomers[customerIndex],
+    ...updatedCustomer,
+  };
+  
+  const resultCustomer = updatedCustomers[customerIndex];
+  
+  setCurrentQueue({
+    ...currentQueue,
+    customers: updatedCustomers,
+    currentlyServing: currentQueue.currentlyServing?.id === id ? resultCustomer : currentQueue.currentlyServing,
+  });
+  
+  try {
+    // Try to sync with Supabase if available
+    const updateData: any = {};
+    
+    if (updatedCustomer.name) updateData.name = updatedCustomer.name;
+    if (updatedCustomer.phone) updateData.phone = updatedCustomer.phone;
+    if (updatedCustomer.partySize) updateData.party_size = updatedCustomer.partySize;
+    if (updatedCustomer.preferences) updateData.preferences = updatedCustomer.preferences;
+    if (updatedCustomer.status) updateData.status = updatedCustomer.status;
+    
+    const { error } = await supabase
+      .from("waiting_customers")
+      .update(updateData)
+      .eq("id", id);
+      
+    if (error) throw error;
+    
+  } catch (error) {
+    console.warn("Failed to sync with database, using local storage instead", error);
+  }
+  
+  return resultCustomer;
 };
 
 // Update a customer's status in the waiting queue
@@ -48,10 +101,20 @@ export const updateCustomerStatus = async (id: string, status: "waiting" | "call
   if (customerIndex === -1) throw new Error("Customer not found");
   
   const updatedCustomers = [...currentQueue.customers];
-  updatedCustomers[customerIndex] = {
-    ...updatedCustomers[customerIndex],
-    status,
-  };
+  
+  // If status is changing to "called", add called_at timestamp
+  if (status === "called" && updatedCustomers[customerIndex].status !== "called") {
+    updatedCustomers[customerIndex] = {
+      ...updatedCustomers[customerIndex],
+      status,
+      calledAt: Date.now(), // Add timestamp when customer is called
+    };
+  } else {
+    updatedCustomers[customerIndex] = {
+      ...updatedCustomers[customerIndex],
+      status,
+    };
+  }
   
   const updatedCustomer = updatedCustomers[customerIndex];
   
@@ -63,9 +126,16 @@ export const updateCustomerStatus = async (id: string, status: "waiting" | "call
   
   try {
     // Try to sync with Supabase if available
+    const updateData: any = { status };
+    
+    // If status is changing to "called", add called_at timestamp
+    if (status === "called") {
+      updateData.called_at = new Date().toISOString();
+    }
+    
     const { error } = await supabase
       .from("waiting_customers")
-      .update({ status })
+      .update(updateData)
       .eq("id", id);
       
     if (error) throw error;
@@ -88,6 +158,7 @@ export const callCustomer = async (id: string): Promise<void> => {
   updatedCustomers[customerIndex] = {
     ...updatedCustomers[customerIndex],
     status: "called",
+    calledAt: Date.now(), // Add timestamp when customer is called
   };
   
   setCurrentQueue({
@@ -100,7 +171,10 @@ export const callCustomer = async (id: string): Promise<void> => {
     // Try to sync with Supabase if available
     const { error } = await supabase
       .from("waiting_customers")
-      .update({ status: "called" })
+      .update({ 
+        status: "called",
+        called_at: new Date().toISOString()
+      })
       .eq("id", id);
       
     if (error) throw error;

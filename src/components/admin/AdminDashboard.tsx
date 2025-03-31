@@ -3,17 +3,24 @@ import React, { useState } from "react";
 import { Customer } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BellRing, Users, Clock, LogOut, UserCheck, X, History, Star, User, Coffee, UserPlus } from "lucide-react";
+import { BellRing, Users, Clock, LogOut, UserCheck, X, History, Star, User, Coffee, UserPlus, Edit, Calendar, BarChart } from "lucide-react";
 import { formatWaitingTime } from "@/utils/geoUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import AdminRegistrationForm from "./AdminRegistrationForm";
+import { format } from "date-fns";
+import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
 
 interface AdminDashboardProps {
   customers: Customer[];
   onCallNext: () => void;
   onRemoveCustomer: (id: string) => void;
   onFinishServing: (id: string) => void;
+  onUpdateCustomer: (id: string, updatedCustomer: Partial<Customer>) => void;
   onLogout: () => void;
   currentlyServing: Customer | null;
   calledHistory: Customer[];
@@ -22,6 +29,7 @@ interface AdminDashboardProps {
   queueCounts: {time: string, count: number}[];
   avgWaitTime: number | null;
   onRegisterCustomer: (customer: Customer) => void;
+  dailyStats: {date: string, groups_count: number, people_count: number}[];
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -29,6 +37,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onCallNext,
   onRemoveCustomer,
   onFinishServing,
+  onUpdateCustomer,
   onLogout,
   currentlyServing,
   calledHistory,
@@ -37,9 +46,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   queueCounts,
   avgWaitTime,
   onRegisterCustomer,
+  dailyStats,
 }) => {
   const [confirmDialog, setConfirmDialog] = useState(false);
   const [customerToRemove, setCustomerToRemove] = useState<Customer | null>(null);
+  const [editDialog, setEditDialog] = useState(false);
+  const [customerToEdit, setCustomerToEdit] = useState<Customer | null>(null);
+  const [editedName, setEditedName] = useState("");
+  const [editedPhone, setEditedPhone] = useState("");
+  const [editedPartySize, setEditedPartySize] = useState<number>(1);
+  const [editedPreferences, setEditedPreferences] = useState<{
+    pregnant: boolean;
+    elderly: boolean;
+    disabled: boolean;
+    infant: boolean;
+    withDog: boolean;
+    indoor: boolean;
+    outdoor: boolean;
+  }>({
+    pregnant: false,
+    elderly: false,
+    disabled: false,
+    infant: false,
+    withDog: false,
+    indoor: true,
+    outdoor: false,
+  });
 
   // Count waiting customers
   const waitingCount = customers.filter(c => c.status === "waiting").length;
@@ -66,6 +98,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (customerToRemove) {
       onRemoveCustomer(customerToRemove.id);
       setConfirmDialog(false);
+    }
+  };
+
+  const handleEditClick = (customer: Customer) => {
+    setCustomerToEdit(customer);
+    setEditedName(customer.name);
+    setEditedPhone(customer.phone);
+    setEditedPartySize(customer.partySize);
+    setEditedPreferences(customer.preferences);
+    setEditDialog(true);
+  };
+
+  const confirmEdit = () => {
+    if (customerToEdit) {
+      onUpdateCustomer(customerToEdit.id, {
+        name: editedName,
+        phone: editedPhone,
+        partySize: editedPartySize,
+        preferences: editedPreferences,
+      });
+      setEditDialog(false);
     }
   };
 
@@ -159,6 +212,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <Button 
                   variant="outline" 
                   size="sm" 
+                  onClick={() => handleEditClick(currentlyServing)}
+                  className="flex items-center gap-1 border-blue-500 text-blue-600 hover:bg-blue-50"
+                >
+                  <Edit className="h-4 w-4" />
+                  <span>Editar</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
                   onClick={() => handleFinishServingClick(currentlyServing)}
                   className="flex items-center gap-1 border-green-500 text-green-600 hover:bg-green-50"
                 >
@@ -219,6 +281,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   customer={customer} 
                   position={index + 1}
                   onRemove={() => handleRemoveClick(customer)}
+                  onEdit={() => handleEditClick(customer)}
                 />
               ))}
             </div>
@@ -240,6 +303,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 position={0}
                 onRemove={() => handleRemoveClick(currentlyServing)}
                 onFinishServing={() => handleFinishServingClick(currentlyServing)}
+                onEdit={() => handleEditClick(currentlyServing)}
               />
             </div>
           )}
@@ -260,6 +324,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   customer={customer} 
                   position={index + 1}
                   onRemove={() => handleRemoveClick(customer)}
+                  onEdit={() => handleEditClick(customer)}
                   isPriority
                 />
               ))}
@@ -271,7 +336,50 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <h2 className="text-xl font-bold text-gastro-blue mb-3">Histórico do Dia</h2>
           
           <div className="bg-white p-4 rounded-lg shadow-md mb-4">
-            <h3 className="font-semibold text-gastro-blue mb-3">Estatísticas da Fila</h3>
+            <h3 className="font-semibold text-gastro-blue mb-3 flex items-center gap-2">
+              <BarChart className="h-5 w-5 text-gastro-blue" />
+              Estatísticas Diárias
+            </h3>
+            
+            {dailyStats.length > 0 ? (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Grupos</TableHead>
+                      <TableHead>Pessoas</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dailyStats.map((stat, index) => (
+                      <TableRow key={index}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-gastro-gray" />
+                            {formatDateBR(stat.date)}
+                          </div>
+                        </TableCell>
+                        <TableCell>{stat.groups_count}</TableCell>
+                        <TableCell>{stat.people_count}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="text-center p-4 text-gastro-gray">
+                Sem dados estatísticos disponíveis.
+              </div>
+            )}
+          </div>
+          
+          <h3 className="font-semibold text-gastro-blue mb-3 flex items-center gap-2">
+            <History className="h-5 w-5 text-gastro-blue" />
+            Estatísticas da Fila
+          </h3>
+          
+          <div className="bg-white p-4 rounded-lg shadow-md mb-4">
             <div className="relative h-40">
               {queueCounts.length > 0 ? (
                 <svg className="w-full h-full" viewBox={`0 0 ${queueCounts.length * 15} 100`} preserveAspectRatio="none">
@@ -330,6 +438,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
           
+          <h3 className="font-semibold text-gastro-blue mb-3 flex items-center gap-2">
+            <Clock className="h-5 w-5 text-gastro-blue" />
+            Atendimentos Recentes
+          </h3>
+          
           {calledHistory.length === 0 ? (
             <div className="bg-white p-6 rounded-lg shadow-md text-center">
               <p className="text-gastro-gray">Nenhum histórico de atendimento disponível hoje.</p>
@@ -380,8 +493,155 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={editDialog} onOpenChange={setEditDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar informações do cliente</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Nome</Label>
+              <Input
+                id="name"
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="phone">Telefone</Label>
+              <Input
+                id="phone"
+                value={editedPhone}
+                onChange={(e) => setEditedPhone(e.target.value.replace(/\D/g, ""))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="partySize">Quantidade de pessoas</Label>
+              <Select 
+                value={editedPartySize.toString()} 
+                onValueChange={(value) => setEditedPartySize(parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                    <SelectItem key={num} value={num.toString()}>
+                      {num} {num === 1 ? 'pessoa' : 'pessoas'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Preferências</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="pregnant"
+                    checked={editedPreferences.pregnant}
+                    onCheckedChange={(checked) => 
+                      setEditedPreferences({...editedPreferences, pregnant: checked === true})
+                    }
+                  />
+                  <Label htmlFor="pregnant">Gestante</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="elderly"
+                    checked={editedPreferences.elderly}
+                    onCheckedChange={(checked) => 
+                      setEditedPreferences({...editedPreferences, elderly: checked === true})
+                    }
+                  />
+                  <Label htmlFor="elderly">Idoso</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="disabled"
+                    checked={editedPreferences.disabled}
+                    onCheckedChange={(checked) => 
+                      setEditedPreferences({...editedPreferences, disabled: checked === true})
+                    }
+                  />
+                  <Label htmlFor="disabled">PCD</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="infant"
+                    checked={editedPreferences.infant}
+                    onCheckedChange={(checked) => 
+                      setEditedPreferences({...editedPreferences, infant: checked === true})
+                    }
+                  />
+                  <Label htmlFor="infant">Criança de colo</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="withDog"
+                    checked={editedPreferences.withDog}
+                    onCheckedChange={(checked) => 
+                      setEditedPreferences({...editedPreferences, withDog: checked === true})
+                    }
+                  />
+                  <Label htmlFor="withDog">Com cachorro</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="indoor"
+                    checked={editedPreferences.indoor}
+                    onCheckedChange={(checked) => {
+                      const isIndoor = checked === true;
+                      setEditedPreferences({
+                        ...editedPreferences, 
+                        indoor: isIndoor,
+                        outdoor: isIndoor ? false : true
+                      });
+                    }}
+                  />
+                  <Label htmlFor="indoor">Mesa interna</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="outdoor"
+                    checked={editedPreferences.outdoor}
+                    onCheckedChange={(checked) => {
+                      const isOutdoor = checked === true;
+                      setEditedPreferences({
+                        ...editedPreferences, 
+                        outdoor: isOutdoor,
+                        indoor: isOutdoor ? false : true
+                      });
+                    }}
+                  />
+                  <Label htmlFor="outdoor">Mesa externa</Label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmEdit}>
+              Salvar alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+};
+
+// Função auxiliar para formatar datas no padrão brasileiro
+const formatDateBR = (dateStr: string) => {
+  try {
+    const date = new Date(dateStr);
+    return format(date, 'dd/MM/yyyy');
+  } catch (e) {
+    return dateStr;
+  }
 };
 
 // Componente de cartão do cliente para evitar repetição de código
@@ -389,12 +649,14 @@ const CustomerCard = ({
   customer, 
   position, 
   onRemove, 
+  onEdit,
   onFinishServing, 
   isPriority 
 }: { 
   customer: Customer;
   position: number;
   onRemove: () => void;
+  onEdit: () => void;
   onFinishServing?: () => void;
   isPriority?: boolean;
 }) => {
@@ -450,6 +712,14 @@ const CustomerCard = ({
         </div>
         
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onEdit}
+            className="border-blue-500 text-blue-600 hover:bg-blue-50"
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
           {onFinishServing && (
             <Button 
               variant="outline" 

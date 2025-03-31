@@ -6,7 +6,14 @@ import { Customer, WaitingQueueState } from "@/types";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { Home } from "lucide-react";
-import { subscribeToQueueChanges, updateCustomerStatus, removeCustomer, addCustomer } from "@/services/waitingQueueService";
+import { 
+  subscribeToQueueChanges, 
+  updateCustomerStatus, 
+  removeCustomer, 
+  addCustomer, 
+  updateCustomerInfo, 
+  fetchDailyStatistics 
+} from "@/services/waitingQueueService";
 
 const Admin = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -14,6 +21,7 @@ const Admin = () => {
   const [activeTab, setActiveTab] = useState<'waiting' | 'called' | 'history' | 'priority' | 'register'>('waiting');
   const [calledHistory, setCalledHistory] = useState<Customer[]>([]);
   const [queueCounts, setQueueCounts] = useState<{time: string, count: number}[]>([]);
+  const [dailyStats, setDailyStats] = useState<{date: string, groups_count: number, people_count: number}[]>([]);
 
   // Inscreve-se para atualizações em tempo real quando logado
   useEffect(() => {
@@ -36,6 +44,14 @@ const Admin = () => {
         return newCounts;
       });
     });
+    
+    // Buscar estatísticas diárias
+    const loadDailyStats = async () => {
+      const stats = await fetchDailyStatistics(7);
+      setDailyStats(stats.reverse()); // Mais recente primeiro
+    };
+    
+    loadDailyStats();
     
     return () => unsubscribe();
   }, [isLoggedIn]);
@@ -121,20 +137,41 @@ const Admin = () => {
     }
   };
 
-  // Calcula o tempo médio de espera atual
-  const calculateAverageWaitTime = () => {
-    const waitingCustomers = queueState.customers.filter(c => c.status === 'waiting');
-    if (waitingCustomers.length <= 1) return null;
-    
-    const timestamps = waitingCustomers.map(c => c.timestamp).sort((a, b) => a - b);
-    let totalDiff = 0;
-    
-    for (let i = 1; i < timestamps.length; i++) {
-      totalDiff += timestamps[i] - timestamps[i-1];
+  const handleUpdateCustomer = async (id: string, updatedCustomer: Partial<Customer>) => {
+    try {
+      await updateCustomerInfo(id, updatedCustomer);
+      toast.success("Informações do cliente atualizadas com sucesso!");
+    } catch (error) {
+      console.error("Erro ao atualizar cliente:", error);
+      toast.error("Erro ao atualizar informações do cliente. Tente novamente.");
     }
+  };
+
+  // Calcula o tempo médio de espera com base na diferença entre entrada e chamada
+  const calculateAverageWaitTime = () => {
+    const calledCustomers = queueState.customers
+      .filter(c => c.status === 'called' && c.calledAt && c.timestamp)
+      .concat(calledHistory.filter(c => c.calledAt && c.timestamp));
     
-    const avgDiffMs = totalDiff / (timestamps.length - 1);
-    return Math.ceil(avgDiffMs / 60000);
+    if (calledCustomers.length === 0) return null;
+    
+    let totalWaitTime = 0;
+    let count = 0;
+    
+    calledCustomers.forEach(customer => {
+      if (customer.calledAt && customer.timestamp) {
+        const waitTime = customer.calledAt - customer.timestamp;
+        if (waitTime > 0) {
+          totalWaitTime += waitTime;
+          count++;
+        }
+      }
+    });
+    
+    if (count === 0) return null;
+    
+    // Retorna o tempo médio em minutos
+    return Math.ceil(totalWaitTime / count / 60000);
   };
 
   return (
@@ -157,6 +194,8 @@ const Admin = () => {
           queueCounts={queueCounts}
           avgWaitTime={calculateAverageWaitTime()}
           onRegisterCustomer={handleRegisterCustomer}
+          onUpdateCustomer={handleUpdateCustomer}
+          dailyStats={dailyStats}
         />
       )}
 

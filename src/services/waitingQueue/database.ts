@@ -22,6 +22,7 @@ export const fetchQueueFromDatabase = async (): Promise<void> => {
         preferences: item.preferences,
         timestamp: item.timestamp,
         status: item.status,
+        calledAt: item.called_at ? new Date(item.called_at).getTime() : undefined,
         priority: item.preferences.pregnant || item.preferences.elderly || item.preferences.disabled || item.preferences.infant,
       }));
       
@@ -33,5 +34,20 @@ export const fetchQueueFromDatabase = async (): Promise<void> => {
     }
   } catch (error) {
     console.warn("Failed to fetch from database, using local storage instead", error);
+  }
+};
+
+// Fetch daily statistics from the database
+export const fetchDailyStatistics = async (limit = 7): Promise<{ date: string, groups_count: number, people_count: number }[]> => {
+  try {
+    const { data, error } = await supabase
+      .rpc('get_daily_statistics', { limit_param: limit });
+      
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
+    console.warn("Failed to fetch daily statistics", error);
+    return [];
   }
 };
