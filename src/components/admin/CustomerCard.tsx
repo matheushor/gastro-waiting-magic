@@ -81,24 +81,29 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
             size="sm" 
             onClick={onEdit}
             className="border-blue-500 text-blue-600 hover:bg-blue-50"
+            title="Editar cliente"
           >
             <Edit className="h-4 w-4" />
           </Button>
+          
           {onFinishServing && (
             <Button 
               variant="outline" 
               size="sm" 
               onClick={onFinishServing}
               className="border-green-500 text-green-600 hover:bg-green-50"
+              title="Finalizar atendimento"
             >
               <Coffee className="h-4 w-4" />
             </Button>
           )}
+          
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={onRemove}
             className="text-red-500 hover:text-red-700 hover:bg-red-50"
+            title="Remover cliente"
           >
             <X className="h-4 w-4" />
           </Button>

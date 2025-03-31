@@ -189,15 +189,19 @@ export const updateCustomer = async (customer: Customer): Promise<void> => {
 
 // Calculate average waiting time based on historical data
 export const calculateAverageWaitTime = (customers: Customer[]): number | null => {
-  // Find only customers that were called and have a timestamp for when they were called
-  const completedWaits = customers.filter(c => c.status === "called" && c.calledAt);
+  // Find customers that were called and have both entry timestamp and call timestamp
+  const completedWaits = customers.filter(c => 
+    c.status === "called" && c.timestamp && c.calledAt
+  );
   
   if (completedWaits.length === 0) return null;
   
-  // Calculate the waiting time for each group (difference between call time and entry time)
+  // Calculate the actual waiting time for each group (difference between call time and entry time)
   const waitTimes = completedWaits.map(c => (c.calledAt || 0) - c.timestamp);
+  
+  // Get the total waiting time
   const totalWaitTime = waitTimes.reduce((sum, time) => sum + time, 0);
   
-  // Return the average waiting time in minutes
+  // Return the average waiting time in minutes, rounded up to nearest minute
   return Math.ceil(totalWaitTime / waitTimes.length / 60000);
 };

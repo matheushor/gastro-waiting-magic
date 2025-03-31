@@ -1,7 +1,7 @@
 
 import React from "react";
 import { DailyStatistics } from "@/types";
-import { BarChart, Clock } from "lucide-react";
+import { BarChart, Clock, Calendar } from "lucide-react";
 
 interface HistoryTabProps {
   dailyStats: DailyStatistics[];
@@ -16,23 +16,27 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
   realAvgWaitTime,
   isMobile
 }) => {
+  // Get today's statistics from the first item (most recent)
+  const todayStats = dailyStats.length > 0 ? dailyStats[0] : null;
+  const todayDate = new Date().toLocaleDateString('pt-BR');
+
   return (
     <div>
       <h2 className="text-xl font-bold text-gastro-blue mb-3">Histórico do Dia</h2>
       
       <div className="bg-white p-4 rounded-lg shadow-md mb-4">
         <h3 className="font-semibold text-gastro-blue mb-3 flex items-center gap-2">
-          <BarChart className="h-5 w-5" />
-          Estatísticas da Fila
+          <Calendar className="h-5 w-5" />
+          Estatísticas de Hoje ({todayDate})
         </h3>
         <div className={`grid gap-4 mb-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
           <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
             <h4 className="text-sm font-medium text-gastro-blue mb-1">Clientes Hoje</h4>
             <p className="text-2xl font-bold text-gastro-blue">
-              {dailyStats[0]?.groups_count || 0} <span className="text-sm font-normal text-gastro-gray">grupos</span>
+              {todayStats?.groups_count || 0} <span className="text-sm font-normal text-gastro-gray">grupos</span>
             </p>
             <p className="text-sm text-gastro-gray">
-              ({dailyStats[0]?.people_count || 0} pessoas no total)
+              ({todayStats?.people_count || 0} pessoas no total)
             </p>
           </div>
           <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
@@ -41,10 +45,15 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
               {realAvgWaitTime ? `${realAvgWaitTime}m` : "-"}
             </p>
             <p className="text-sm text-gastro-gray">
-              Baseado em atendimentos
+              Baseado em atendimentos reais
             </p>
           </div>
         </div>
+        
+        <h3 className="font-semibold text-gastro-blue mb-3 flex items-center gap-2">
+          <BarChart className="h-5 w-5" />
+          Variação da Fila Hoje
+        </h3>
         
         <div className="relative h-40">
           {queueCounts.length > 0 ? (
