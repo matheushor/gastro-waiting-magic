@@ -19,9 +19,6 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     outDir: "dist",
-    commonjsOptions: {
-      transformMixedEsModules: true,
-    },
   },
   plugins: [
     react(),
@@ -32,8 +29,5 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-  },
-  optimizeDeps: {
-    include: ['is-core-module'],
   },
 }));
