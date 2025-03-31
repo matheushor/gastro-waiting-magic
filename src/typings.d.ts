@@ -83,6 +83,36 @@ declare module 'prop-types' {
   export default propTypes;
 }
 
+// Add declaration for next-themes
+declare module 'next-themes' {
+  import { ReactNode } from 'react';
+  
+  export interface ThemeProviderProps {
+    attribute?: string;
+    defaultTheme?: string;
+    enableSystem?: boolean;
+    storageKey?: string;
+    value?: { [themeName: string]: string };
+    children: ReactNode;
+    enableColorScheme?: boolean;
+    disableTransitionOnChange?: boolean;
+    forcedTheme?: string;
+  }
+  
+  export interface UseThemeProps {
+    themes: string[];
+    forcedTheme?: string;
+    setTheme: (theme: string) => void;
+    theme?: string;
+    resolvedTheme?: string;
+    systemTheme?: 'dark' | 'light';
+  }
+  
+  export const ThemeProvider: React.FC<ThemeProviderProps>;
+  
+  export function useTheme(): UseThemeProps;
+}
+
 // Declare global types if needed
 interface Window {
   // Add any window extensions here if needed
