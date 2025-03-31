@@ -9,7 +9,6 @@ export interface Customer {
   status: 'waiting' | 'called' | 'seated' | 'left';
   position?: number; // Position in the queue
   priority?: boolean; // Indicates if the customer has priority (pregnant, elderly, disabled, infant)
-  calledAt?: number; // Unix timestamp when customer was called
 }
 
 export interface Preferences {
@@ -30,10 +29,4 @@ export interface Admin {
 export interface WaitingQueueState {
   customers: Customer[];
   currentlyServing: Customer | null;
-}
-
-export interface DailyStatistics {
-  date: string;
-  groups_count: number;
-  people_count: number;
 }

@@ -19,24 +19,15 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     outDir: "dist",
-    commonjsOptions: {
-      transformMixedEsModules: true,
-    },
   },
   plugins: [
     react(),
-    mode === 'development' && componentTagger(),
+    mode === 'development' &&
+    componentTagger(),
   ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-    }
+    },
   },
-  optimizeDeps: {
-    esbuildOptions: {
-      define: {
-        global: 'globalThis',
-      },
-    }
-  }
 }));
