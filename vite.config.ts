@@ -31,11 +31,14 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-    },
-    dedupe: ['react', 'react-dom', '@supabase/supabase-js', 'acorn'],
+    }
   },
   optimizeDeps: {
-    force: true,
-    include: ['@supabase/supabase-js', 'acorn']
+    esbuildOptions: {
+      // Node.js global to browser globalThis
+      define: {
+        global: 'globalThis',
+      },
+    }
   }
 }));
