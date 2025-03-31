@@ -35,3 +35,26 @@ export const fetchQueueFromDatabase = async (): Promise<void> => {
     console.warn("Failed to fetch from database, using local storage instead", error);
   }
 };
+
+// Fetch daily statistics from the database
+export const fetchDailyStatistics = async (): Promise<{ groups: number, people: number }> => {
+  try {
+    const { data, error } = await supabase
+      .rpc('get_daily_statistics_for_today');
+    
+    if (error) throw error;
+    
+    if (data && data.length > 0) {
+      return {
+        groups: data[0].groups_count,
+        people: data[0].people_count
+      };
+    }
+    
+    // Return default values if no data found
+    return { groups: 0, people: 0 };
+  } catch (error) {
+    console.warn("Failed to fetch daily statistics", error);
+    return { groups: 0, people: 0 };
+  }
+};

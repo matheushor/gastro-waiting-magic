@@ -6,7 +6,13 @@ import { Customer, WaitingQueueState } from "@/types";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { Home } from "lucide-react";
-import { subscribeToQueueChanges, updateCustomerStatus, removeCustomer, addCustomer } from "@/services/waitingQueueService";
+import { 
+  subscribeToQueueChanges, 
+  updateCustomerStatus, 
+  removeCustomer, 
+  addCustomer,
+  fetchDailyStatistics 
+} from "@/services/waitingQueueService";
 
 const Admin = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -14,6 +20,18 @@ const Admin = () => {
   const [activeTab, setActiveTab] = useState<'waiting' | 'called' | 'history' | 'priority' | 'register'>('waiting');
   const [calledHistory, setCalledHistory] = useState<Customer[]>([]);
   const [queueCounts, setQueueCounts] = useState<{time: string, count: number}[]>([]);
+  const [dailyStats, setDailyStats] = useState<{ groups: number, people: number }>({ groups: 0, people: 0 });
+
+  // Fetch daily statistics
+  useEffect(() => {
+    if (isLoggedIn && activeTab === 'history') {
+      const fetchStats = async () => {
+        const stats = await fetchDailyStatistics();
+        setDailyStats(stats);
+      };
+      fetchStats();
+    }
+  }, [isLoggedIn, activeTab]);
 
   // Inscreve-se para atualizações em tempo real quando logado
   useEffect(() => {
@@ -115,6 +133,12 @@ const Admin = () => {
       await addCustomer(customer);
       setActiveTab('waiting');
       toast.success("Cliente cadastrado com sucesso!");
+      
+      // Refresh statistics when a new customer is registered
+      if (isLoggedIn) {
+        const stats = await fetchDailyStatistics();
+        setDailyStats(stats);
+      }
     } catch (error) {
       console.error("Erro ao cadastrar cliente:", error);
       toast.error("Erro ao cadastrar cliente. Tente novamente.");
@@ -157,6 +181,7 @@ const Admin = () => {
           queueCounts={queueCounts}
           avgWaitTime={calculateAverageWaitTime()}
           onRegisterCustomer={handleRegisterCustomer}
+          dailyStats={dailyStats}
         />
       )}
 

@@ -1,13 +1,13 @@
-
 import React, { useState } from "react";
 import { Customer } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BellRing, Users, Clock, LogOut, UserCheck, X, History, Star, User, Coffee, UserPlus } from "lucide-react";
+import { BellRing, Users, Clock, LogOut, UserCheck, X, History, Star, User, Coffee, UserPlus, Group, Calendar } from "lucide-react";
 import { formatWaitingTime } from "@/utils/geoUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import AdminRegistrationForm from "./AdminRegistrationForm";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface AdminDashboardProps {
   customers: Customer[];
@@ -22,6 +22,7 @@ interface AdminDashboardProps {
   queueCounts: {time: string, count: number}[];
   avgWaitTime: number | null;
   onRegisterCustomer: (customer: Customer) => void;
+  dailyStats: { groups: number, people: number };
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -37,19 +38,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   queueCounts,
   avgWaitTime,
   onRegisterCustomer,
+  dailyStats,
 }) => {
   const [confirmDialog, setConfirmDialog] = useState(false);
   const [customerToRemove, setCustomerToRemove] = useState<Customer | null>(null);
 
-  // Count waiting customers
   const waitingCount = customers.filter(c => c.status === "waiting").length;
 
-  // Get waiting customers sorted by timestamp
   const waitingCustomers = [...customers]
     .filter(c => c.status === "waiting")
     .sort((a, b) => a.timestamp - b.timestamp);
     
-  // Get priority customers
   const priorityCustomers = [...customers]
     .filter(c => 
       c.status === "waiting" && 
@@ -270,63 +269,96 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <TabsContent value="history">
           <h2 className="text-xl font-bold text-gastro-blue mb-3">Histórico do Dia</h2>
           
-          <div className="bg-white p-4 rounded-lg shadow-md mb-4">
-            <h3 className="font-semibold text-gastro-blue mb-3">Estatísticas da Fila</h3>
-            <div className="relative h-40">
-              {queueCounts.length > 0 ? (
-                <svg className="w-full h-full" viewBox={`0 0 ${queueCounts.length * 15} 100`} preserveAspectRatio="none">
-                  <line 
-                    x1="0" 
-                    y1="90" 
-                    x2={queueCounts.length * 15} 
-                    y2="90" 
-                    stroke="#ddd" 
-                    strokeWidth="1" 
-                  />
-                  {[...Array(5)].map((_, i) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="bg-white p-4 rounded-lg shadow-md">
+              <h3 className="font-semibold text-gastro-blue mb-3 flex items-center">
+                <Calendar className="h-5 w-5 mr-2 text-gastro-orange" />
+                Estatísticas do Dia
+              </h3>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead className="text-right">Quantidade</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell className="flex items-center">
+                      <Group className="h-4 w-4 mr-2 text-gastro-blue" />
+                      Grupos atendidos
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">{dailyStats.groups}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="flex items-center">
+                      <Users className="h-4 w-4 mr-2 text-gastro-blue" />
+                      Total de pessoas
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">{dailyStats.people}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+            
+            <div className="bg-white p-4 rounded-lg shadow-md">
+              <h3 className="font-semibold text-gastro-blue mb-3">Tendência da Fila</h3>
+              <div className="relative h-40">
+                {queueCounts.length > 0 ? (
+                  <svg className="w-full h-full" viewBox={`0 0 ${queueCounts.length * 15} 100`} preserveAspectRatio="none">
                     <line 
-                      key={i}
                       x1="0" 
-                      y1={90 - (i+1) * 15} 
+                      y1="90" 
                       x2={queueCounts.length * 15} 
-                      y2={90 - (i+1) * 15} 
-                      stroke="#eee" 
+                      y2="90" 
+                      stroke="#ddd" 
                       strokeWidth="1" 
                     />
-                  ))}
-                  <polyline 
-                    points={queueCounts.map((point, index) => 
-                      `${index * 15}, ${Math.max(10, 90 - point.count * 10)}`
-                    ).join(' ')} 
-                    fill="none" 
-                    stroke="#3B82F6" 
-                    strokeWidth="2" 
-                  />
-                  {queueCounts.map((point, index) => (
-                    <circle 
-                      key={index}
-                      cx={index * 15} 
-                      cy={Math.max(10, 90 - point.count * 10)} 
-                      r="3" 
-                      fill="#3B82F6" 
+                    {[...Array(5)].map((_, i) => (
+                      <line 
+                        key={i}
+                        x1="0" 
+                        y1={90 - (i+1) * 15} 
+                        x2={queueCounts.length * 15} 
+                        y2={90 - (i+1) * 15} 
+                        stroke="#eee" 
+                        strokeWidth="1" 
+                      />
+                    ))}
+                    <polyline 
+                      points={queueCounts.map((point, index) => 
+                        `${index * 15}, ${Math.max(10, 90 - point.count * 10)}`
+                      ).join(' ')} 
+                      fill="none" 
+                      stroke="#3B82F6" 
+                      strokeWidth="2" 
                     />
-                  ))}
-                </svg>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gastro-gray">
-                  Sem dados disponíveis
-                </div>
-              )}
-            </div>
-            <div className="flex justify-between mt-2 text-xs text-gastro-gray">
-              {queueCounts.length > 0 && (
-                <>
-                  <div>{queueCounts[0].time}</div>
-                  {queueCounts.length > 1 && (
-                    <div>{queueCounts[queueCounts.length - 1].time}</div>
-                  )}
-                </>
-              )}
+                    {queueCounts.map((point, index) => (
+                      <circle 
+                        key={index}
+                        cx={index * 15} 
+                        cy={Math.max(10, 90 - point.count * 10)} 
+                        r="3" 
+                        fill="#3B82F6" 
+                      />
+                    ))}
+                  </svg>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gastro-gray">
+                    Sem dados disponíveis
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-between mt-2 text-xs text-gastro-gray">
+                {queueCounts.length > 0 && (
+                  <>
+                    <div>{queueCounts[0].time}</div>
+                    {queueCounts.length > 1 && (
+                      <div>{queueCounts[queueCounts.length - 1].time}</div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
           
@@ -384,7 +416,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   );
 };
 
-// Componente de cartão do cliente para evitar repetição de código
 const CustomerCard = ({ 
   customer, 
   position, 
