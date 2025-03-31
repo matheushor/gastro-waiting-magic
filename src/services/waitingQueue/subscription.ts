@@ -1,75 +1,68 @@
 
+import { supabase } from "../../integrations/supabase/client";
 import { WaitingQueueState } from "../../types";
-import { supabase } from "../../integrations/supabase/client"; 
-import { getCurrentQueue, setCurrentQueue, subscribers } from "./storage";
+import { getCurrentQueue, subscribers } from "./storage";
 import { fetchQueueFromDatabase } from "./database";
 
-// Subscribe to queue changes and get notifications when the queue is updated
+// Subscribe to queue changes
 export const subscribeToQueueChanges = (
   callback: (state: WaitingQueueState) => void
 ): (() => void) => {
-  if (!callback || typeof callback !== 'function') {
-    throw new Error("A valid callback function is required");
-  }
+  subscribers.push(callback);
+  callback({ ...getCurrentQueue() });
+  
+  // Use a fallback approach that doesn't depend on WebSockets
+  let supbaseSubscriptionActive = false;
   
   try {
-    // Add the callback to the list of subscribers
-    subscribers.push(callback);
-    
-    // Send the initial state
-    const currentQueue = getCurrentQueue();
-    callback({ ...currentQueue });
-    
-    // Set up subscription to Supabase real-time changes if available
-    let channel;
-    try {
-      channel = supabase
-        .channel('schema-db-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'waiting_customers'
-          },
-          (payload) => {
-            console.log('Real-time update received:', payload);
-            // Refresh the queue from the database
-            fetchQueueFromDatabase().then(() => {
-              // State will be updated by fetchQueueFromDatabase
-              // and it will automatically trigger notifications to subscribers
-            }).catch(err => {
-              console.error("Error fetching queue after real-time update:", err);
-            });
+    // Safer way to check if we can use Supabase
+    if (supabase && typeof supabase.channel === 'function') {
+      try {
+        const channel = supabase
+          .channel('public:waiting_customers')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'waiting_customers' }, (payload) => {
+            fetchQueueFromDatabase();
+          })
+          .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+              supbaseSubscriptionActive = true;
+              fetchQueueFromDatabase(); // Initial fetch when subscription is successful
+            } else {
+              console.warn("Supabase subscription status:", status);
+            }
+          });
+          
+        // Return unsubscribe function that handles both Supabase and local
+        return () => {
+          const index = subscribers.indexOf(callback);
+          if (index !== -1) {
+            subscribers.splice(index, 1);
           }
-        )
-        .subscribe((status) => {
-          console.log('Supabase real-time subscription status:', status);
-        });
-    } catch (err) {
-      console.error("Failed to subscribe to Supabase real-time updates:", err);
-      // Even if Supabase subscription fails, we continue with local queue updates
+          
+          if (supbaseSubscriptionActive) {
+            supabase.removeChannel(channel);
+          }
+        };
+      } catch (wsError) {
+        console.warn("WebSocket connection failed, falling back to local updates", wsError);
+      }
     }
-
-    // Return function to unsubscribe
-    return () => {
-      const index = subscribers.indexOf(callback);
-      if (index !== -1) {
-        subscribers.splice(index, 1);
-      }
-      
-      // Unsubscribe from Supabase real-time updates if channel exists
-      if (channel) {
-        try {
-          supabase.removeChannel(channel);
-        } catch (err) {
-          console.error("Error removing Supabase channel:", err);
-        }
-      }
-    };
   } catch (error) {
-    console.error("Error in subscribeToQueueChanges:", error);
-    // Return an empty function to avoid breaking the caller
-    return () => {};
+    console.warn("Failed to set up Supabase connection, using local updates only", error);
   }
+  
+  // If we reach here, we're using local updates only
+  // Set up a polling mechanism as a fallback
+  const pollingInterval = setInterval(() => {
+    callback({ ...getCurrentQueue() });
+  }, 5000);
+  
+  // Return unsubscribe function for local updates
+  return () => {
+    const index = subscribers.indexOf(callback);
+    if (index !== -1) {
+      subscribers.splice(index, 1);
+    }
+    clearInterval(pollingInterval);
+  };
 };

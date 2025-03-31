@@ -1,17 +1,16 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Customer, DailyStatistics } from "@/types";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, BellRing, History, Star, UserPlus } from "lucide-react";
+import { BellRing, Users, Clock, LogOut, UserCheck, X, History, Star, User, Coffee, UserPlus, Edit, BarChart } from "lucide-react";
+import { formatWaitingTime } from "@/utils/geoUtils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import AdminRegistrationForm from "./AdminRegistrationForm";
 import EditCustomerDialog from "./EditCustomerDialog";
+import { fetchDailyStatistics } from "@/services/waitingQueue/database";
 import { calculateAverageWaitTime } from "@/services/waitingQueue/operations";
-import CustomerListTab from "./CustomerListTab";
-import DashboardStats from "./DashboardStats";
-import CurrentCustomer from "./CurrentCustomer";
-import HistoryTab from "./HistoryTab";
-import ConfirmationDialog from "./ConfirmationDialog";
 
 interface AdminDashboardProps {
   customers: Customer[];
@@ -27,8 +26,6 @@ interface AdminDashboardProps {
   queueCounts: {time: string, count: number}[];
   avgWaitTime: number | null;
   onRegisterCustomer: (customer: Customer) => void;
-  dailyStats: DailyStatistics[];
-  isMobile: boolean;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -45,21 +42,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   queueCounts,
   avgWaitTime,
   onRegisterCustomer,
-  dailyStats,
-  isMobile,
 }) => {
   const [confirmDialog, setConfirmDialog] = useState(false);
   const [customerToRemove, setCustomerToRemove] = useState<Customer | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [customerToEdit, setCustomerToEdit] = useState<Customer | null>(null);
-  const [confirmAction, setConfirmAction] = useState<"remove" | "finish" | null>(null);
+  const [dailyStats, setDailyStats] = useState<DailyStatistics[]>([]);
 
+  // Fetch daily statistics when viewing history tab
+  useEffect(() => {
+    if (activeTab === 'history') {
+      const getDailyStats = async () => {
+        const stats = await fetchDailyStatistics();
+        setDailyStats(stats);
+      };
+      getDailyStats();
+    }
+  }, [activeTab]);
+
+  // Count waiting customers
   const waitingCount = customers.filter(c => c.status === "waiting").length;
 
+  // Get waiting customers sorted by timestamp
   const waitingCustomers = [...customers]
     .filter(c => c.status === "waiting")
     .sort((a, b) => a.timestamp - b.timestamp);
     
+  // Get priority customers
   const priorityCustomers = [...customers]
     .filter(c => 
       c.status === "waiting" && 
@@ -67,37 +76,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     )
     .sort((a, b) => a.timestamp - b.timestamp);
 
+  // Calculate actual wait time based on timestamp and calledAt
   const realAvgWaitTime = calculateAverageWaitTime(customers);
 
   const handleRemoveClick = (customer: Customer) => {
     setCustomerToRemove(customer);
-    setConfirmAction("remove");
-    setConfirmDialog(true);
-  };
-
-  const handleFinishServingClick = (customer: Customer) => {
-    setCustomerToRemove(customer);
-    setConfirmAction("finish");
     setConfirmDialog(true);
   };
 
   const confirmRemove = () => {
-    if (!customerToRemove) return;
-    
-    if (confirmAction === "remove") {
+    if (customerToRemove) {
       onRemoveCustomer(customerToRemove.id);
-      toast.success("Cliente removido com sucesso!", {
-        description: `${customerToRemove.name} foi removido da fila.`
-      });
-    } else if (confirmAction === "finish") {
-      onFinishServing(customerToRemove.id);
-      toast.success("Cliente atendido com sucesso!", {
-        description: `${customerToRemove.name} foi marcado como atendido.`
-      });
+      setConfirmDialog(false);
     }
-    
-    setCustomerToRemove(null);
-    setConfirmAction(null);
   };
 
   const handleEditClick = (customer: Customer) => {
@@ -108,44 +99,131 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleSaveEdit = (updatedCustomer: Customer) => {
     onUpdateCustomer(updatedCustomer);
     setEditDialogOpen(false);
-    toast.success("Cliente atualizado com sucesso!", {
-      description: `Informações de ${updatedCustomer.name} foram atualizadas.`
-    });
+    toast.success("Cliente atualizado com sucesso!");
   };
 
-  const handleCallNextWithNotification = () => {
-    const waitingCustomers = customers.filter(c => c.status === "waiting");
+  const renderPreferences = (customer: Customer) => {
+    const { preferences } = customer;
+    const activePreferences = [];
     
-    if (waitingCustomers.length === 0) {
-      toast.error("Não há clientes na fila de espera.");
-      return;
-    }
+    if (preferences.pregnant) activePreferences.push("Gestante");
+    if (preferences.elderly) activePreferences.push("Idoso");
+    if (preferences.disabled) activePreferences.push("PCD");
+    if (preferences.infant) activePreferences.push("Criança de colo");
+    if (preferences.withDog) activePreferences.push("Com cachorro");
+    if (preferences.indoor) activePreferences.push("Mesa interna");
+    else activePreferences.push("Mesa externa");
     
-    onCallNext();
+    return activePreferences.map((pref, index) => (
+      <span key={index} className="preference-tag">
+        {pref}
+      </span>
+    ));
+  };
+
+  const handleFinishServingClick = (customer: Customer) => {
+    onFinishServing(customer.id);
   };
 
   return (
-    <div className={`mx-auto p-4 ${isMobile ? 'max-w-full' : 'max-w-4xl'}`}>
-      <DashboardStats 
-        waitingCount={waitingCount}
-        avgWaitTime={realAvgWaitTime} 
-        onCallNext={handleCallNextWithNotification}
-        onLogout={onLogout}
-        currentlyServing={!!currentlyServing}
-        isMobile={isMobile}
-      />
+    <div className="mx-auto max-w-4xl p-4">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gastro-blue">Painel Administrativo</h1>
+          <p className="text-gastro-gray">Quatro Gastro Burger</p>
+        </div>
+        <Button variant="outline" onClick={onLogout} className="flex items-center gap-2">
+          <LogOut className="h-4 w-4" />
+          <span>Sair</span>
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-gastro-blue text-white p-6 rounded-lg shadow-md flex items-center">
+          <Users className="h-10 w-10 mr-4" />
+          <div>
+            <h2 className="text-3xl font-bold">{waitingCount}</h2>
+            <p className="text-sm">Clientes na fila</p>
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow-md flex items-center">
+          <Clock className="h-10 w-10 mr-4 text-gastro-orange" />
+          <div>
+            <h2 className="text-3xl font-bold text-gastro-blue">
+              {realAvgWaitTime ? `${realAvgWaitTime}m` : "-"}
+            </h2>
+            <p className="text-sm text-gastro-gray">Tempo médio de espera</p>
+          </div>
+        </div>
+        
+        <div>
+          <Button 
+            onClick={onCallNext} 
+            disabled={waitingCount === 0 || currentlyServing !== null}
+            className="h-full w-full bg-gastro-orange hover:bg-orange-600 text-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center"
+          >
+            <BellRing className="h-10 w-10 mb-2" />
+            <span className="text-lg font-semibold">Chamar Próximo</span>
+          </Button>
+        </div>
+      </div>
 
       {currentlyServing && (
-        <CurrentCustomer 
-          currentlyServing={currentlyServing}
-          onEdit={handleEditClick}
-          onFinishServing={(id) => handleFinishServingClick(customers.find(c => c.id === id)!)}
-          onRemove={handleRemoveClick}
-        />
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-gastro-blue mb-3 flex items-center">
+            <UserCheck className="h-5 w-5 mr-2" />
+            Cliente Atual
+          </h2>
+          <div className="bg-orange-50 border border-gastro-orange p-4 rounded-lg">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-semibold text-lg">{currentlyServing.name}</h3>
+                <div className="flex items-center text-sm text-gastro-gray">
+                  <span className="mr-2">{currentlyServing.partySize} {currentlyServing.partySize > 1 ? 'pessoas' : 'pessoa'}</span>
+                  •
+                  <span className="ml-2">Tel: {currentlyServing.phone}</span>
+                </div>
+                <div className="mt-2">
+                  {renderPreferences(currentlyServing)}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleEditClick(currentlyServing)}
+                  className="flex items-center gap-1 border-blue-500 text-blue-600 hover:bg-blue-50"
+                >
+                  <Edit className="h-4 w-4" />
+                  <span>Editar</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleFinishServingClick(currentlyServing)}
+                  className="flex items-center gap-1 border-green-500 text-green-600 hover:bg-green-50"
+                >
+                  <Coffee className="h-4 w-4" />
+                  <span>Atendido</span>
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={() => handleRemoveClick(currentlyServing)}
+                  className="flex items-center gap-1"
+                >
+                  <X className="h-4 w-4" />
+                  <span>Remover</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       <Tabs defaultValue="waiting" value={activeTab} onValueChange={(val) => onChangeTab(val as any)}>
-        <TabsList className={`grid mb-4 overflow-x-auto flex-nowrap ${isMobile ? 'grid-cols-3' : 'grid-cols-5'}`}>
+        <TabsList className="grid grid-cols-5 mb-4 overflow-x-auto flex-nowrap">
           <TabsTrigger value="waiting" className="flex items-center gap-1">
             <Users className="h-4 w-4" />
             <span>Aguardando</span>
@@ -158,84 +236,229 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <Star className="h-4 w-4" />
             <span>Prioritários</span>
           </TabsTrigger>
-          {!isMobile && (
-            <>
-              <TabsTrigger value="history" className="flex items-center gap-1">
-                <History className="h-4 w-4" />
-                <span>Histórico</span>
-              </TabsTrigger>
-              <TabsTrigger value="register" className="flex items-center gap-1">
-                <UserPlus className="h-4 w-4" />
-                <span>Cadastrar</span>
-              </TabsTrigger>
-            </>
-          )}
+          <TabsTrigger value="history" className="flex items-center gap-1">
+            <History className="h-4 w-4" />
+            <span>Histórico</span>
+          </TabsTrigger>
+          <TabsTrigger value="register" className="flex items-center gap-1">
+            <UserPlus className="h-4 w-4" />
+            <span>Cadastrar</span>
+          </TabsTrigger>
         </TabsList>
         
-        {isMobile && (
-          <TabsList className="grid grid-cols-2 mb-4 overflow-x-auto flex-nowrap">
-            <TabsTrigger value="history" className="flex items-center gap-1">
-              <History className="h-4 w-4" />
-              <span>Histórico</span>
-            </TabsTrigger>
-            <TabsTrigger value="register" className="flex items-center gap-1">
-              <UserPlus className="h-4 w-4" />
-              <span>Cadastrar</span>
-            </TabsTrigger>
-          </TabsList>
-        )}
-        
         <TabsContent value="waiting">
-          <CustomerListTab 
-            title="Fila de Espera"
-            customers={waitingCustomers}
-            onEdit={handleEditClick}
-            onRemove={handleRemoveClick}
-            emptyMessage="Não há clientes na fila no momento."
-            isMobile={isMobile}
-          />
+          <h2 className="text-xl font-bold text-gastro-blue mb-3">Fila de Espera</h2>
+          
+          {waitingCustomers.length === 0 ? (
+            <div className="bg-white p-6 rounded-lg shadow-md text-center">
+              <p className="text-gastro-gray">Não há clientes na fila no momento.</p>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {waitingCustomers.map((customer, index) => (
+                <CustomerCard 
+                  key={customer.id} 
+                  customer={customer} 
+                  position={index + 1}
+                  onRemove={() => handleRemoveClick(customer)}
+                  onEdit={() => handleEditClick(customer)}
+                />
+              ))}
+            </div>
+          )}
         </TabsContent>
         
         <TabsContent value="called">
-          {currentlyServing ? (
-            <CustomerListTab 
-              title="Clientes Chamados"
-              customers={[currentlyServing]}
-              onEdit={handleEditClick}
-              onRemove={handleRemoveClick}
-              onFinishServing={onFinishServing}
-              emptyMessage="Nenhum cliente sendo chamado no momento."
-              isMobile={isMobile}
-            />
+          <h2 className="text-xl font-bold text-gastro-blue mb-3">Clientes Chamados</h2>
+          
+          {!currentlyServing ? (
+            <div className="bg-white p-6 rounded-lg shadow-md text-center">
+              <p className="text-gastro-gray">Nenhum cliente sendo chamado no momento.</p>
+            </div>
           ) : (
-            <div>
-              <h2 className="text-xl font-bold text-gastro-blue mb-3">Clientes Chamados</h2>
-              <div className="bg-white p-6 rounded-lg shadow-md text-center">
-                <p className="text-gastro-gray">Nenhum cliente sendo chamado no momento.</p>
-              </div>
+            <div className="grid gap-4">
+              <CustomerCard 
+                key={currentlyServing.id} 
+                customer={currentlyServing} 
+                position={0}
+                onRemove={() => handleRemoveClick(currentlyServing)}
+                onFinishServing={() => handleFinishServingClick(currentlyServing)}
+                onEdit={() => handleEditClick(currentlyServing)}
+              />
             </div>
           )}
         </TabsContent>
         
         <TabsContent value="priority">
-          <CustomerListTab 
-            title="Clientes Prioritários"
-            customers={priorityCustomers}
-            onEdit={handleEditClick}
-            onRemove={handleRemoveClick}
-            isPriority={true}
-            emptyMessage="Não há clientes prioritários na fila."
-            isMobile={isMobile}
-          />
+          <h2 className="text-xl font-bold text-gastro-blue mb-3">Clientes Prioritários</h2>
+          
+          {priorityCustomers.length === 0 ? (
+            <div className="bg-white p-6 rounded-lg shadow-md text-center">
+              <p className="text-gastro-gray">Não há clientes prioritários na fila.</p>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {priorityCustomers.map((customer, index) => (
+                <CustomerCard 
+                  key={customer.id} 
+                  customer={customer} 
+                  position={index + 1}
+                  onRemove={() => handleRemoveClick(customer)}
+                  onEdit={() => handleEditClick(customer)}
+                  isPriority
+                />
+              ))}
+            </div>
+          )}
         </TabsContent>
         
         <TabsContent value="history">
-          <HistoryTab 
-            dailyStats={dailyStats}
-            queueCounts={queueCounts}
-            realAvgWaitTime={realAvgWaitTime}
-            isMobile={isMobile}
-          />
+          <h2 className="text-xl font-bold text-gastro-blue mb-3">Histórico do Dia</h2>
+          
+          <div className="bg-white p-4 rounded-lg shadow-md mb-4">
+            <h3 className="font-semibold text-gastro-blue mb-3 flex items-center gap-2">
+              <BarChart className="h-5 w-5" />
+              Estatísticas da Fila
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                <h4 className="text-sm font-medium text-gastro-blue mb-1">Clientes Hoje</h4>
+                <p className="text-2xl font-bold text-gastro-blue">
+                  {dailyStats[0]?.groups_count || 0} <span className="text-sm font-normal text-gastro-gray">grupos</span>
+                </p>
+                <p className="text-sm text-gastro-gray">
+                  ({dailyStats[0]?.people_count || 0} pessoas no total)
+                </p>
+              </div>
+              <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
+                <h4 className="text-sm font-medium text-gastro-orange mb-1">Tempo Médio de Espera</h4>
+                <p className="text-2xl font-bold text-gastro-orange">
+                  {realAvgWaitTime ? `${realAvgWaitTime}m` : "-"}
+                </p>
+                <p className="text-sm text-gastro-gray">
+                  Baseado em {customers.filter(c => c.status === "called" && c.calledAt).length} atendimentos
+                </p>
+              </div>
+            </div>
+            
+            <div className="relative h-40">
+              {queueCounts.length > 0 ? (
+                <svg className="w-full h-full" viewBox={`0 0 ${queueCounts.length * 15} 100`} preserveAspectRatio="none">
+                  <line 
+                    x1="0" 
+                    y1="90" 
+                    x2={queueCounts.length * 15} 
+                    y2="90" 
+                    stroke="#ddd" 
+                    strokeWidth="1" 
+                  />
+                  {[...Array(5)].map((_, i) => (
+                    <line 
+                      key={i}
+                      x1="0" 
+                      y1={90 - (i+1) * 15} 
+                      x2={queueCounts.length * 15} 
+                      y2={90 - (i+1) * 15} 
+                      stroke="#eee" 
+                      strokeWidth="1" 
+                    />
+                  ))}
+                  <polyline 
+                    points={queueCounts.map((point, index) => 
+                      `${index * 15}, ${Math.max(10, 90 - point.count * 10)}`
+                    ).join(' ')} 
+                    fill="none" 
+                    stroke="#3B82F6" 
+                    strokeWidth="2" 
+                  />
+                  {queueCounts.map((point, index) => (
+                    <circle 
+                      key={index}
+                      cx={index * 15} 
+                      cy={Math.max(10, 90 - point.count * 10)} 
+                      r="3" 
+                      fill="#3B82F6" 
+                    />
+                  ))}
+                </svg>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gastro-gray">
+                  Sem dados disponíveis
+                </div>
+              )}
+            </div>
+            <div className="flex justify-between mt-2 text-xs text-gastro-gray">
+              {queueCounts.length > 0 && (
+                <>
+                  <div>{queueCounts[0].time}</div>
+                  {queueCounts.length > 1 && (
+                    <div>{queueCounts[queueCounts.length - 1].time}</div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+          
+          <h3 className="font-semibold text-gastro-blue mb-3">Clientes Atendidos Hoje</h3>
+          
+          {calledHistory.length === 0 ? (
+            <div className="bg-white p-6 rounded-lg shadow-md text-center">
+              <p className="text-gastro-gray">Nenhum histórico de atendimento disponível hoje.</p>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {calledHistory.map((customer) => (
+                <div key={customer.id + customer.timestamp} className="bg-white p-4 rounded-lg shadow-md opacity-80">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-medium">{customer.name}</h3>
+                      <div className="flex items-center text-sm text-gastro-gray mt-1">
+                        <span className="mr-2">{customer.partySize} {customer.partySize > 1 ? 'pessoas' : 'pessoa'}</span>
+                        •
+                        <span className="mx-2">Tel: {customer.phone}</span>
+                        •
+                        <span className="mx-2">Status: {customer.status === 'seated' ? 'Atendido' : 'Chamado'}</span>
+                      </div>
+                      <div className="mt-2">
+                        {renderPreferences(customer)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <h3 className="font-semibold text-gastro-blue my-3">Histórico dos Últimos Dias</h3>
+          
+          {dailyStats.length === 0 ? (
+            <div className="bg-white p-6 rounded-lg shadow-md text-center">
+              <p className="text-gastro-gray">Nenhuma estatística disponível.</p>
+            </div>
+          ) : (
+            <div className="bg-white p-4 rounded-lg shadow-md">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gastro-gray uppercase tracking-wider">Data</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gastro-gray uppercase tracking-wider">Grupos</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gastro-gray uppercase tracking-wider">Pessoas</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {dailyStats.map((stat, index) => (
+                      <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-blue-50'}>
+                        <td className="px-4 py-2 text-sm text-gastro-gray">{new Date(stat.date).toLocaleDateString('pt-BR')}</td>
+                        <td className="px-4 py-2 text-sm font-medium text-gastro-blue">{stat.groups_count}</td>
+                        <td className="px-4 py-2 text-sm text-gastro-gray">{stat.people_count}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </TabsContent>
         
         <TabsContent value="register">
@@ -244,21 +467,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </TabsContent>
       </Tabs>
 
-      <ConfirmationDialog 
-        open={confirmDialog}
-        onOpenChange={setConfirmDialog}
-        title={confirmAction === "remove" ? "Confirmar remoção" : "Confirmar atendimento"}
-        message={
-          confirmAction === "remove" 
-            ? `Tem certeza que deseja remover ${customerToRemove?.name} da fila?` 
-            : `Confirmar que ${customerToRemove?.name} foi atendido?`
-        }
-        confirmText={confirmAction === "remove" ? "Remover" : "Confirmar"}
-        cancelText="Cancelar"
-        onConfirm={confirmRemove}
-        customer={customerToRemove || undefined}
-        variant={confirmAction === "remove" ? "destructive" : "default"}
-      />
+      <Dialog open={confirmDialog} onOpenChange={setConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar remoção</DialogTitle>
+          </DialogHeader>
+          <p>
+            Tem certeza que deseja remover {customerToRemove?.name} da fila?
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDialog(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmRemove}>
+              Remover
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       {customerToEdit && (
         <EditCustomerDialog 
@@ -268,6 +494,106 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           onSave={handleSaveEdit}
         />
       )}
+    </div>
+  );
+};
+
+// Componente de cartão do cliente para evitar repetição de código
+const CustomerCard = ({ 
+  customer, 
+  position, 
+  onRemove, 
+  onEdit,
+  onFinishServing, 
+  isPriority 
+}: { 
+  customer: Customer;
+  position: number;
+  onRemove: () => void;
+  onEdit: () => void;
+  onFinishServing?: () => void;
+  isPriority?: boolean;
+}) => {
+  const { preferences } = customer;
+  const activePreferences = [];
+  
+  if (preferences.pregnant) activePreferences.push("Gestante");
+  if (preferences.elderly) activePreferences.push("Idoso");
+  if (preferences.disabled) activePreferences.push("PCD");
+  if (preferences.infant) activePreferences.push("Criança de colo");
+  if (preferences.withDog) activePreferences.push("Com cachorro");
+  if (preferences.indoor) activePreferences.push("Mesa interna");
+  else activePreferences.push("Mesa externa");
+  
+  return (
+    <div className={`bg-white p-4 rounded-lg shadow-md ${isPriority ? 'border-l-4 border-gastro-orange' : ''}`}>
+      <div className="flex justify-between items-start">
+        <div>
+          <div className="flex items-center">
+            <div className={`${
+              customer.status === "called" 
+                ? "bg-gastro-orange" 
+                : "bg-gastro-blue"
+            } text-white h-6 w-6 rounded-full flex items-center justify-center text-sm mr-2`}>
+              {position}
+            </div>
+            <h3 className="font-semibold">{customer.name}</h3>
+            {isPriority && (
+              <span className="ml-2 bg-orange-100 text-gastro-orange text-xs px-2 py-0.5 rounded-full">
+                Prioritário
+              </span>
+            )}
+          </div>
+          
+          <div className="flex items-center text-sm text-gastro-gray mt-1">
+            <span className="mr-2">{customer.partySize} {customer.partySize > 1 ? 'pessoas' : 'pessoa'}</span>
+            •
+            <span className="mx-2">Tel: {customer.phone}</span>
+            •
+            <Clock className="h-3 w-3 mx-1" />
+            <span className="waiting-time">
+              {formatWaitingTime(customer.timestamp)}
+            </span>
+          </div>
+          
+          <div className="mt-2">
+            {activePreferences.map((pref, index) => (
+              <span key={index} className="preference-tag">
+                {pref}
+              </span>
+            ))}
+          </div>
+        </div>
+        
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onEdit}
+            className="border-blue-500 text-blue-600 hover:bg-blue-50"
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          {onFinishServing && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onFinishServing}
+              className="border-green-500 text-green-600 hover:bg-green-50"
+            >
+              <Coffee className="h-4 w-4" />
+            </Button>
+          )}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onRemove}
+            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };

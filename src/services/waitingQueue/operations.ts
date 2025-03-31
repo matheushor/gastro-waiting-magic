@@ -3,24 +3,15 @@ import { Customer } from "../../types";
 import { supabase } from "../../integrations/supabase/client";
 import { getCurrentQueue, setCurrentQueue } from "./storage";
 import { recordDailyStatistics } from "./database";
-import { Json } from "@/integrations/supabase/types";
-
-// Helper function to convert Customer preferences to Json
-const convertPreferencesToJson = (preferences: any): Json => {
-  return preferences as unknown as Json;
-};
 
 // Add a customer to the waiting queue
 export const addCustomer = async (customer: Customer): Promise<void> => {
-  // Convert Preferences to JSON-compatible format
+  // Create a proper UUID format for database
   const supabaseCustomer = {
-    id: customer.id,
-    name: customer.name,
-    phone: customer.phone,
+    ...customer,
+    // Use Supabase's UUID generation on the server side
     party_size: customer.partySize,
-    preferences: convertPreferencesToJson(customer.preferences),
-    status: customer.status,
-    timestamp: customer.timestamp,
+    preferences: customer.preferences as any, // Required type assertion for Supabase
   };
   
   const currentQueue = getCurrentQueue();
@@ -34,7 +25,14 @@ export const addCustomer = async (customer: Customer): Promise<void> => {
     // Try to sync with Supabase if available
     const { error } = await supabase
       .from("waiting_customers")
-      .insert(supabaseCustomer);
+      .insert({
+        name: supabaseCustomer.name,
+        phone: supabaseCustomer.phone,
+        party_size: supabaseCustomer.party_size,
+        preferences: supabaseCustomer.preferences,
+        status: supabaseCustomer.status,
+        timestamp: supabaseCustomer.timestamp,
+      });
       
     if (error) throw error;
     
@@ -176,7 +174,7 @@ export const updateCustomer = async (customer: Customer): Promise<void> => {
         name: customer.name,
         phone: customer.phone,
         party_size: customer.partySize,
-        preferences: convertPreferencesToJson(customer.preferences),
+        preferences: customer.preferences,
       })
       .eq("id", customer.id);
       
@@ -189,27 +187,14 @@ export const updateCustomer = async (customer: Customer): Promise<void> => {
 
 // Calculate average waiting time based on historical data
 export const calculateAverageWaitTime = (customers: Customer[]): number | null => {
-  if (!Array.isArray(customers) || customers.length === 0) return null;
-  
-  // Find customers that were called and have both entry timestamp and call timestamp
-  const completedWaits = customers.filter(c => 
-    c.status === "called" && c.timestamp && c.calledAt
-  );
+  const completedWaits = customers.filter(c => c.status === "called" && c.calledAt);
   
   if (completedWaits.length === 0) return null;
   
-  // Calculate the actual waiting time for each group (difference between call time and entry time)
-  const waitTimes = completedWaits.map(c => {
-    const calledTime = c.calledAt || 0;
-    const entryTime = c.timestamp || 0;
-    return calledTime > entryTime ? calledTime - entryTime : 0;
-  }).filter(time => time > 0);
-  
-  if (waitTimes.length === 0) return null;
-  
-  // Get the total waiting time
+  // Calculate wait time for each customer (called time - entry time)
+  const waitTimes = completedWaits.map(c => (c.calledAt || 0) - c.timestamp);
   const totalWaitTime = waitTimes.reduce((sum, time) => sum + time, 0);
   
-  // Return the average waiting time in minutes, rounded up to nearest minute
+  // Return average wait time in minutes
   return Math.ceil(totalWaitTime / waitTimes.length / 60000);
 };

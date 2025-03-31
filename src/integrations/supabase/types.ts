@@ -9,33 +9,8 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      daily_statistics: {
-        Row: {
-          created_at: string | null
-          date: string
-          groups_count: number
-          id: string
-          people_count: number
-        }
-        Insert: {
-          created_at?: string | null
-          date: string
-          groups_count?: number
-          id?: string
-          people_count?: number
-        }
-        Update: {
-          created_at?: string | null
-          date?: string
-          groups_count?: number
-          id?: string
-          people_count?: number
-        }
-        Relationships: []
-      }
       waiting_customers: {
         Row: {
-          called_at: string | null
           created_at: string
           id: string
           name: string
@@ -46,7 +21,6 @@ export type Database = {
           timestamp: number
         }
         Insert: {
-          called_at?: string | null
           created_at?: string
           id?: string
           name: string
@@ -57,7 +31,6 @@ export type Database = {
           timestamp: number
         }
         Update: {
-          called_at?: string | null
           created_at?: string
           id?: string
           name?: string
@@ -74,42 +47,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_daily_statistics: {
-        Args: {
-          limit_param: number
-        }
-        Returns: {
-          date: string
-          groups_count: number
-          people_count: number
-        }[]
-      }
-      get_daily_statistics_by_date: {
-        Args: {
-          date_param: string
-        }
-        Returns: {
-          date: string
-          groups_count: number
-          people_count: number
-        }[]
-      }
-      insert_daily_statistics: {
-        Args: {
-          date_param: string
-          groups_count_value: number
-          people_count_value: number
-        }
-        Returns: undefined
-      }
-      update_daily_statistics: {
-        Args: {
-          date_param: string
-          groups_count_increment: number
-          people_count_increment: number
-        }
-        Returns: undefined
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never

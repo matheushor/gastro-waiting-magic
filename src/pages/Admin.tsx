@@ -6,16 +6,14 @@ import { Customer, WaitingQueueState } from "@/types";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { Home } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   subscribeToQueueChanges, 
-  updateCustomer,
+  updateCustomerStatus, 
   removeCustomer, 
   addCustomer, 
-  updateCustomerStatus,
+  updateCustomer,
   calculateAverageWaitTime
 } from "@/services/waitingQueueService";
-import { fetchDailyStatistics } from "@/services/waitingQueue/database";
 
 const Admin = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -23,20 +21,21 @@ const Admin = () => {
   const [activeTab, setActiveTab] = useState<'waiting' | 'called' | 'history' | 'priority' | 'register'>('waiting');
   const [calledHistory, setCalledHistory] = useState<Customer[]>([]);
   const [queueCounts, setQueueCounts] = useState<{time: string, count: number}[]>([]);
-  const [dailyStatistics, setDailyStatistics] = useState<{date: string, groups_count: number, people_count: number}[]>([]);
-  const isMobile = useIsMobile();
 
+  // Inscreve-se para atualizações em tempo real quando logado
   useEffect(() => {
     if (!isLoggedIn) return;
     
     const unsubscribe = subscribeToQueueChanges(newState => {
       setQueueState(newState);
       
+      // Atualizar contagem de clientes a cada mudança
       const now = new Date();
       const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
       const waitingCount = newState.customers.filter(c => c.status === 'waiting').length;
       
       setQueueCounts(prev => {
+        // Limitamos o histórico para manter apenas os últimos 50 registros
         const newCounts = [...prev, { time: timeStr, count: waitingCount }];
         if (newCounts.length > 50) {
           return newCounts.slice(-50);
@@ -48,72 +47,44 @@ const Admin = () => {
     return () => unsubscribe();
   }, [isLoggedIn]);
 
-  useEffect(() => {
-    if (isLoggedIn && activeTab === 'history') {
-      loadDailyStatistics();
-    }
-  }, [isLoggedIn, activeTab]);
-
-  const loadDailyStatistics = async () => {
-    try {
-      const stats = await fetchDailyStatistics();
-      setDailyStatistics(stats);
-    } catch (error) {
-      console.error("Erro ao carregar estatísticas diárias:", error);
-      toast.error("Falha ao carregar estatísticas", {
-        description: "Não foi possível carregar as estatísticas diárias. Tente novamente mais tarde."
-      });
-    }
-  };
-
   const handleLogin = () => {
     setIsLoggedIn(true);
-    toast.success("Login realizado com sucesso!", {
-      description: "Bem-vindo ao Painel Administrativo do Quatro Gastro Burger."
-    });
+    toast.success("Login realizado com sucesso!");
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
-    toast.info("Logout realizado", {
-      description: "Você saiu do sistema com sucesso."
-    });
   };
 
   const handleCallNext = async () => {
     const waitingCustomers = queueState.customers.filter(c => c.status === "waiting");
     
+    // Prioriza clientes com preferências especiais
     const priorityCustomers = waitingCustomers.filter(c => 
       c.preferences.pregnant || c.preferences.elderly || c.preferences.disabled || c.preferences.infant
     );
     
+    // Seleciona o próximo cliente (prioridade ou aguardando normal)
     const customersToConsider = activeTab === 'priority' && priorityCustomers.length > 0 
       ? priorityCustomers 
       : waitingCustomers;
     
     if (customersToConsider.length > 0) {
+      // Sort by timestamp to get the longest waiting customer
       const sortedCustomers = [...customersToConsider].sort((a, b) => a.timestamp - b.timestamp);
       const nextCustomer = sortedCustomers[0];
       
       try {
+        // Atualiza o status do cliente para "called"
         const called = await updateCustomerStatus(nextCustomer.id, "called");
-        setCalledHistory(prev => [called, ...prev].slice(0, 50));
-        
-        // Enhanced notification
-        toast.success(`${nextCustomer.name} foi chamado!`, {
-          description: `${nextCustomer.partySize} ${nextCustomer.partySize > 1 ? 'pessoas' : 'pessoa'} • Tel: ${nextCustomer.phone}`,
-          duration: 5000,
-        });
+        setCalledHistory(prev => [called, ...prev].slice(0, 50)); // Limita histórico a 50 entradas
+        toast.success(`${nextCustomer.name} foi chamado!`);
       } catch (error) {
         console.error("Erro ao chamar próximo cliente:", error);
-        toast.error("Erro ao chamar próximo cliente", {
-          description: "Ocorreu um problema ao chamar o próximo cliente. Tente novamente."
-        });
+        toast.error("Erro ao chamar próximo cliente. Tente novamente.");
       }
     } else {
-      toast.error("Fila vazia", {
-        description: "Não há clientes na fila de espera no momento."
-      });
+      toast.error("Não há clientes na fila de espera.");
     }
   };
 
@@ -123,16 +94,15 @@ const Admin = () => {
       toast.success("Cliente removido com sucesso!");
     } catch (error) {
       console.error("Erro ao remover cliente:", error);
-      toast.error("Erro ao remover cliente", {
-        description: "Não foi possível remover o cliente. Tente novamente."
-      });
+      toast.error("Erro ao remover cliente. Tente novamente.");
     }
   };
-
+  
   const handleFinishServing = async (id: string) => {
     try {
       const customer = queueState.customers.find(c => c.id === id);
       if (customer) {
+        // Ensure we properly type the status as one of the allowed values
         const seatedCustomer: Customer = {
           ...customer,
           status: "seated" as const
@@ -140,14 +110,10 @@ const Admin = () => {
         setCalledHistory(prev => [seatedCustomer, ...prev].slice(0, 50));
       }
       await removeCustomer(id);
-      toast.success("Cliente atendido com sucesso!", {
-        description: "O cliente foi marcado como atendido e removido da fila."
-      });
+      toast.success("Cliente atendido com sucesso!");
     } catch (error) {
       console.error("Erro ao finalizar atendimento:", error);
-      toast.error("Erro ao finalizar atendimento", {
-        description: "Ocorreu um problema ao finalizar o atendimento. Tente novamente."
-      });
+      toast.error("Erro ao finalizar atendimento. Tente novamente.");
     }
   };
 
@@ -155,31 +121,24 @@ const Admin = () => {
     try {
       await addCustomer(customer);
       setActiveTab('waiting');
-      toast.success("Cliente cadastrado com sucesso!", {
-        description: `${customer.name} foi adicionado à fila de espera.`
-      });
+      toast.success("Cliente cadastrado com sucesso!");
     } catch (error) {
       console.error("Erro ao cadastrar cliente:", error);
-      toast.error("Erro ao cadastrar cliente", {
-        description: "Não foi possível cadastrar o cliente. Verifique as informações e tente novamente."
-      });
+      toast.error("Erro ao cadastrar cliente. Tente novamente.");
     }
   };
 
   const handleUpdateCustomer = async (customer: Customer) => {
     try {
       await updateCustomer(customer);
-      toast.success("Cliente atualizado com sucesso!", {
-        description: `As informações de ${customer.name} foram atualizadas.`
-      });
+      toast.success("Cliente atualizado com sucesso!");
     } catch (error) {
       console.error("Erro ao atualizar cliente:", error);
-      toast.error("Erro ao atualizar cliente", {
-        description: "Não foi possível atualizar as informações do cliente. Tente novamente."
-      });
+      toast.error("Erro ao atualizar cliente. Tente novamente.");
     }
   };
 
+  // Calcula o tempo médio de espera atual usando o método atualizado
   const getAverageWaitTime = () => {
     return calculateAverageWaitTime(queueState.customers);
   };
@@ -205,8 +164,6 @@ const Admin = () => {
           queueCounts={queueCounts}
           avgWaitTime={getAverageWaitTime()}
           onRegisterCustomer={handleRegisterCustomer}
-          dailyStats={dailyStatistics}
-          isMobile={isMobile}
         />
       )}
 

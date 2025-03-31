@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Customer, Preferences } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Heart, User, Home, Wind, Shield } from "lucide-react";
 
 interface EditCustomerDialogProps {
   customer: Customer | null;
@@ -36,23 +35,12 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
   });
 
   // Set initial values when customer changes
-  useEffect(() => {
+  React.useEffect(() => {
     if (customer) {
       setName(customer.name);
       setPhone(customer.phone);
       setPartySize(customer.partySize);
-      // Create a new preferences object with default values of false for any missing properties
-      const updatedPreferences: Preferences = {
-        pregnant: false,
-        elderly: false,
-        disabled: false,
-        infant: false,
-        withDog: false,
-        indoor: false,
-        outdoor: false,
-        ...customer.preferences, // Override with actual customer preferences
-      };
-      setPreferences(updatedPreferences);
+      setPreferences(customer.preferences);
     }
   }, [customer]);
 
@@ -71,13 +59,19 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
       return;
     }
 
+    // Make sure at least one of indoor or outdoor is selected
+    const updatedPreferences = { ...preferences };
+    if (!preferences.indoor && !preferences.outdoor) {
+      updatedPreferences.indoor = true;
+    }
+
     const updatedCustomer: Customer = {
       ...customer,
       name,
       phone,
       partySize,
-      preferences,
-      priority: preferences.pregnant || preferences.elderly || preferences.disabled || preferences.infant,
+      preferences: updatedPreferences,
+      priority: updatedPreferences.pregnant || updatedPreferences.elderly || updatedPreferences.disabled || updatedPreferences.infant,
     };
 
     onSave(updatedCustomer);
@@ -88,10 +82,19 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
       ...prev,
       [key]: !prev[key],
     }));
-  };
 
-  const handlePartySizeChange = (change: number) => {
-    setPartySize(Math.max(1, partySize + change));
+    // If toggling indoor/outdoor, make sure at least one is selected
+    if (key === "indoor" && preferences.indoor && !preferences.outdoor) {
+      setPreferences((prev) => ({
+        ...prev,
+        outdoor: true,
+      }));
+    } else if (key === "outdoor" && preferences.outdoor && !preferences.indoor) {
+      setPreferences((prev) => ({
+        ...prev,
+        indoor: true,
+      }));
+    }
   };
 
   if (!customer) return null;
@@ -126,34 +129,17 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
 
           <div className="space-y-2">
             <Label htmlFor="partySize">Número de pessoas</Label>
-            <div className="flex items-center">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handlePartySizeChange(-1)}
-                className="border-gastro-blue text-gastro-blue"
-              >
-                -
-              </Button>
-              <div className="w-12 text-center font-semibold">{partySize}</div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handlePartySizeChange(1)}
-                className="border-gastro-blue text-gastro-blue"
-              >
-                +
-              </Button>
-            </div>
+            <Input
+              id="partySize"
+              type="number"
+              min={1}
+              value={partySize}
+              onChange={(e) => setPartySize(parseInt(e.target.value) || 1)}
+            />
           </div>
 
           <div className="space-y-2">
-            <Label className="block text-sm font-medium text-gastro-blue flex items-center">
-              <Shield className="h-4 w-4 mr-2" />
-              Necessidades específicas
-            </Label>
+            <Label>Preferências</Label>
             <div className="grid grid-cols-2 gap-2">
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -161,10 +147,7 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
                   checked={preferences.pregnant}
                   onCheckedChange={() => togglePreference("pregnant")}
                 />
-                <Label htmlFor="pregnant" className="text-sm cursor-pointer flex items-center">
-                  <Heart className="h-3 w-3 mr-1 text-red-500" />
-                  Gestante
-                </Label>
+                <Label htmlFor="pregnant" className="text-sm">Gestante</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -172,10 +155,7 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
                   checked={preferences.elderly}
                   onCheckedChange={() => togglePreference("elderly")}
                 />
-                <Label htmlFor="elderly" className="text-sm cursor-pointer flex items-center">
-                  <User className="h-3 w-3 mr-1 text-blue-500" />
-                  Idoso
-                </Label>
+                <Label htmlFor="elderly" className="text-sm">Idoso</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -183,10 +163,7 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
                   checked={preferences.disabled}
                   onCheckedChange={() => togglePreference("disabled")}
                 />
-                <Label htmlFor="disabled" className="text-sm cursor-pointer flex items-center">
-                  <Heart className="h-3 w-3 mr-1 text-red-500" />
-                  PCD
-                </Label>
+                <Label htmlFor="disabled" className="text-sm">PCD</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -194,10 +171,7 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
                   checked={preferences.infant}
                   onCheckedChange={() => togglePreference("infant")}
                 />
-                <Label htmlFor="infant" className="text-sm cursor-pointer flex items-center">
-                  <User className="h-3 w-3 mr-1 text-blue-500" />
-                  Criança de colo
-                </Label>
+                <Label htmlFor="infant" className="text-sm">Criança de colo</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -205,29 +179,15 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
                   checked={preferences.withDog}
                   onCheckedChange={() => togglePreference("withDog")}
                 />
-                <Label htmlFor="withDog" className="text-sm cursor-pointer">
-                  Com cachorro
-                </Label>
+                <Label htmlFor="withDog" className="text-sm">Com cachorro</Label>
               </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="block text-sm font-medium text-gastro-blue flex items-center">
-              <Home className="h-4 w-4 mr-2" />
-              Preferência de mesa
-            </Label>
-            <div className="grid grid-cols-2 gap-2">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="indoor"
                   checked={preferences.indoor}
                   onCheckedChange={() => togglePreference("indoor")}
                 />
-                <Label htmlFor="indoor" className="text-sm cursor-pointer flex items-center">
-                  <Home className="h-3 w-3 mr-1 text-green-600" />
-                  Mesa interna
-                </Label>
+                <Label htmlFor="indoor" className="text-sm">Mesa interna</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -235,10 +195,7 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
                   checked={preferences.outdoor}
                   onCheckedChange={() => togglePreference("outdoor")}
                 />
-                <Label htmlFor="outdoor" className="text-sm cursor-pointer flex items-center">
-                  <Wind className="h-3 w-3 mr-1 text-green-600" />
-                  Mesa externa
-                </Label>
+                <Label htmlFor="outdoor" className="text-sm">Mesa externa</Label>
               </div>
             </div>
           </div>
