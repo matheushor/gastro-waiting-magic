@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Customer, DailyStatistics } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -49,7 +48,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [customerToEdit, setCustomerToEdit] = useState<Customer | null>(null);
   const [dailyStats, setDailyStats] = useState<DailyStatistics[]>([]);
 
-  // Fetch daily statistics when viewing history tab
   useEffect(() => {
     if (activeTab === 'history') {
       const getDailyStats = async () => {
@@ -60,15 +58,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   }, [activeTab]);
 
-  // Count waiting customers
   const waitingCount = customers.filter(c => c.status === "waiting").length;
 
-  // Get waiting customers sorted by timestamp
   const waitingCustomers = [...customers]
     .filter(c => c.status === "waiting")
     .sort((a, b) => a.timestamp - b.timestamp);
     
-  // Get priority customers
   const priorityCustomers = [...customers]
     .filter(c => 
       c.status === "waiting" && 
@@ -76,7 +71,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     )
     .sort((a, b) => a.timestamp - b.timestamp);
 
-  // Calculate actual wait time based on timestamp and calledAt
   const realAvgWaitTime = calculateAverageWaitTime(customers);
 
   const handleRemoveClick = (customer: Customer) => {
@@ -399,36 +393,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
           
-          <h3 className="font-semibold text-gastro-blue mb-3">Clientes Atendidos Hoje</h3>
-          
-          {calledHistory.length === 0 ? (
-            <div className="bg-white p-6 rounded-lg shadow-md text-center">
-              <p className="text-gastro-gray">Nenhum histórico de atendimento disponível hoje.</p>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {calledHistory.map((customer) => (
-                <div key={customer.id + customer.timestamp} className="bg-white p-4 rounded-lg shadow-md opacity-80">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-medium">{customer.name}</h3>
-                      <div className="flex items-center text-sm text-gastro-gray mt-1">
-                        <span className="mr-2">{customer.partySize} {customer.partySize > 1 ? 'pessoas' : 'pessoa'}</span>
-                        •
-                        <span className="mx-2">Tel: {customer.phone}</span>
-                        •
-                        <span className="mx-2">Status: {customer.status === 'seated' ? 'Atendido' : 'Chamado'}</span>
-                      </div>
-                      <div className="mt-2">
-                        {renderPreferences(customer)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          
           <h3 className="font-semibold text-gastro-blue my-3">Histórico dos Últimos Dias</h3>
           
           {dailyStats.length === 0 ? (
@@ -498,7 +462,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   );
 };
 
-// Componente de cartão do cliente para evitar repetição de código
 const CustomerCard = ({ 
   customer, 
   position, 

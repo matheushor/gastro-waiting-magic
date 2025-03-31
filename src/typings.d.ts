@@ -39,6 +39,12 @@ declare module 'recharts' {
   export interface LegendProps extends BaseProps {
     payload?: any[];
     verticalAlign?: string;
+    height?: number;
+    width?: number;
+    iconSize?: number;
+    layout?: 'horizontal' | 'vertical';
+    align?: 'left' | 'center' | 'right';
+    iconType?: 'line' | 'square' | 'rect' | 'circle' | 'cross' | 'diamond' | 'star' | 'triangle' | 'wye';
     // Add other necessary properties
   }
   
