@@ -1,4 +1,8 @@
 
+// Apply Radix UI patches first
+import { applyRadixPatches } from "@/lib/radix-patches";
+applyRadixPatches();
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
