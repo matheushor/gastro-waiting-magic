@@ -33,13 +33,22 @@ export default defineConfig(({ mode }) => ({
       "@radix-ui/react-toast",
       "@radix-ui/react-accordion",
       "@radix-ui/react-aspect-ratio",
-      "@radix-ui/react-slot"
+      "@radix-ui/react-slot",
+      "d3-scale",
+      "d3-shape",
+      "d3-path",
+      "d3-time",
+      "prop-types"
     ],
     esbuildOptions: {
       // Node.js global to browser globalThis
       define: {
         global: 'globalThis',
       },
+      // Improved timeout for esbuild
+      keepNames: true,
+      treeShaking: true,
+      target: 'es2020',
     },
   },
   build: {
@@ -53,7 +62,8 @@ export default defineConfig(({ mode }) => ({
     }
   },
   esbuild: {
-    logOverride: { 'this-is-undefined-in-esm': 'silent' }
+    logOverride: { 'this-is-undefined-in-esm': 'silent' },
+    target: 'es2020',
   },
   plugins: [
     react(),

@@ -1,5 +1,4 @@
 
-
 /**
  * Custom type declarations to help with incompatible type definitions
  */
@@ -23,6 +22,16 @@ declare module 'd3-shape' {
   export function pie(): any;
   export const curveLinear: any; // Fixed from function to const
   // Add any other d3-shape functions you're using
+}
+
+declare module 'd3-time' {
+  export function timeDay(): any;
+  export function timeMonth(): any;
+  export function timeYear(): any;
+}
+
+declare module 'd3-path' {
+  export function path(): any;
 }
 
 // Bypass recharts that depends on d3
@@ -68,8 +77,13 @@ declare module 'recharts' {
   // Add any other recharts components you're using
 }
 
+// Add declaration for prop-types
+declare module 'prop-types' {
+  const propTypes: any;
+  export default propTypes;
+}
+
 // Declare global types if needed
 interface Window {
   // Add any window extensions here if needed
 }
-
