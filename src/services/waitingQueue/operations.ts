@@ -6,12 +6,15 @@ import { recordDailyStatistics } from "./database";
 
 // Add a customer to the waiting queue
 export const addCustomer = async (customer: Customer): Promise<void> => {
-  // Create a proper UUID format for database
+  // Use the customer's UUID directly
   const supabaseCustomer = {
-    ...customer,
-    // Use Supabase's UUID generation on the server side
+    id: customer.id,
+    name: customer.name,
+    phone: customer.phone,
     party_size: customer.partySize,
-    preferences: customer.preferences as any, // Required type assertion for Supabase
+    preferences: customer.preferences,
+    status: customer.status,
+    timestamp: customer.timestamp,
   };
   
   const currentQueue = getCurrentQueue();
@@ -25,14 +28,7 @@ export const addCustomer = async (customer: Customer): Promise<void> => {
     // Try to sync with Supabase if available
     const { error } = await supabase
       .from("waiting_customers")
-      .insert({
-        name: supabaseCustomer.name,
-        phone: supabaseCustomer.phone,
-        party_size: supabaseCustomer.party_size,
-        preferences: supabaseCustomer.preferences,
-        status: supabaseCustomer.status,
-        timestamp: supabaseCustomer.timestamp,
-      });
+      .insert(supabaseCustomer);
       
     if (error) throw error;
     

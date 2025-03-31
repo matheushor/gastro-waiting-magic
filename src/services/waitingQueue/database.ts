@@ -1,6 +1,6 @@
 
 import { supabase } from "../../integrations/supabase/client";
-import { Customer } from "../../types";
+import { Customer, DailyStatistics } from "../../types";
 import { getCurrentQueue, setCurrentQueue } from "./storage";
 
 // Fetch the latest queue data from the database
@@ -23,6 +23,7 @@ export const fetchQueueFromDatabase = async (): Promise<void> => {
         timestamp: item.timestamp,
         status: item.status,
         priority: item.preferences.pregnant || item.preferences.elderly || item.preferences.disabled || item.preferences.infant,
+        calledAt: item.called_at ? new Date(item.called_at).getTime() : undefined
       }));
       
       const currentQueue = getCurrentQueue();
@@ -43,23 +44,21 @@ export const recordDailyStatistics = async (partySize: number): Promise<void> =>
     const today = new Date().toISOString().split('T')[0];
     
     // Check if we already have a record for today
-    const { data, error } = await supabase
+    const { data: existingData, error: fetchError } = await supabase
       .from("daily_statistics")
       .select("*")
       .eq("date", today)
-      .single();
+      .maybeSingle();
     
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
-      throw error;
-    }
+    if (fetchError) throw fetchError;
     
-    if (data) {
+    if (existingData) {
       // Update existing record
       const { error: updateError } = await supabase
         .from("daily_statistics")
         .update({
-          groups_count: data.groups_count + 1,
-          people_count: data.people_count + partySize
+          groups_count: existingData.groups_count + 1,
+          people_count: existingData.people_count + partySize
         })
         .eq("date", today);
         
@@ -82,7 +81,7 @@ export const recordDailyStatistics = async (partySize: number): Promise<void> =>
 };
 
 // Fetch daily statistics for reporting
-export const fetchDailyStatistics = async (): Promise<{ date: string; groups_count: number; people_count: number }[]> => {
+export const fetchDailyStatistics = async (): Promise<DailyStatistics[]> => {
   try {
     // Get the last 30 days of statistics
     const { data, error } = await supabase
