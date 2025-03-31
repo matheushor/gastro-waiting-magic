@@ -9,6 +9,9 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    hmr: {
+      timeout: 60000, // Increase timeout for HMR
+    },
     allowedHosts: [
       "27b530cc-768b-4a51-9152-9156fb7ae1d6.lovableproject.com",
       "localhost",
@@ -17,8 +20,15 @@ export default defineConfig(({ mode }) => ({
   preview: {
     port: 8080,
   },
+  optimizeDeps: {
+    exclude: ["uuid"], // Explicitly exclude uuid to prevent it from being processed
+  },
   build: {
     outDir: "dist",
+    rollupOptions: {
+      // Make sure to exclude problematic dependencies
+      external: ["uuid"],
+    },
   },
   plugins: [
     react(),
