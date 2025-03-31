@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,6 +22,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
     indoor: false,
     outdoor: false,
   });
+
   const [errors, setErrors] = useState<{
     name?: string;
     phone?: string;
@@ -30,7 +30,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
     preferences?: string;
   }>({});
 
-  const validateForm = () => {
+  const validateForm = (): boolean => {
     const newErrors: {
       name?: string;
       phone?: string;
@@ -60,7 +60,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-
     if (!validateForm()) {
       return;
     }
@@ -77,7 +76,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
       priority: preferences.pregnant || preferences.elderly || preferences.disabled || preferences.infant,
     };
 
-    // Call the registration handler
     onRegister(newCustomer);
 
     // Reset form
