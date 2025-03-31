@@ -19,3 +19,8 @@ declare module 'd3-color';
 declare module 'd3-interpolate';
 declare module 'd3-array';
 declare module 'd3-format';
+
+// Add React DOM shim to Window interface
+interface Window {
+  __REACT_DOM_SHIM__?: any;
+}

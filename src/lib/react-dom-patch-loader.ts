@@ -1,3 +1,4 @@
+
 /**
  * This file sets up Vite's import.meta.glob to patch react-dom imports
  * It must be imported before any Radix UI components are used
@@ -35,7 +36,7 @@ if (typeof window !== 'undefined') {
   document.head.prepend(script);
   
   // Store the shim on window for debug purposes
-  window.__REACT_DOM_SHIM__ = reactDomShim;
+  (window as any).__REACT_DOM_SHIM__ = reactDomShim;
 }
 
 // Export nothing - this file is solely for its side effects
