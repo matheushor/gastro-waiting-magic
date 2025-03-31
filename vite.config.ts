@@ -23,12 +23,11 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     force: true, // Force dependency optimization
     exclude: ["uuid"], // Explicitly exclude uuid to prevent it from being processed
-    include: ["react", "react-dom"], // Include critical dependencies but exclude problematic ones
+    include: ["react", "react-dom", "d3-scale", "d3-shape", "recharts"], // Include problematic dependencies
   },
   build: {
     outDir: "dist",
     rollupOptions: {
-      // Make sure to exclude problematic dependencies
       external: ["uuid"],
     },
     sourcemap: true,
@@ -45,5 +44,6 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    preserveSymlinks: true, // Add this to help with module resolution
   },
 }));
