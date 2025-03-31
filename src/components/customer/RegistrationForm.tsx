@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { v4 as uuidv4 } from "uuid";
 import { Customer, Preferences } from "@/types";
 import { AlertCircle } from "lucide-react";
 
@@ -66,9 +65,9 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
       return;
     }
 
-    // Create new customer object
+    // Generate UUID using crypto API instead of uuid package
     const newCustomer: Customer = {
-      id: uuidv4(),
+      id: crypto.randomUUID(),
       name,
       phone,
       partySize,
