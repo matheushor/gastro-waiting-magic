@@ -18,6 +18,17 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
+    // Add sourcemap for better debugging
+    sourcemap: true,
+    // Improve chunking to avoid large bundles
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['@radix-ui/react-toast', '@radix-ui/react-tooltip']
+        }
+      }
+    }
   },
   plugins: [react()],
   resolve: {
@@ -25,4 +36,15 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Add specific optimizeDeps settings to avoid conflicts
+  optimizeDeps: {
+    exclude: ['@radix-ui/react-toast'],
+    esbuildOptions: {
+      target: 'es2020'
+    }
+  },
+  // Add proper TypeScript settings
+  esbuild: {
+    logOverride: { 'this-is-undefined-in-esm': 'silent' }
+  }
 });
