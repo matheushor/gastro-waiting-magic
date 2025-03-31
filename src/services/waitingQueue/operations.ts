@@ -3,16 +3,17 @@ import { Customer } from "../../types";
 import { supabase } from "../../integrations/supabase/client";
 import { getCurrentQueue, setCurrentQueue } from "./storage";
 import { recordDailyStatistics } from "./database";
+import { Json } from "@/integrations/supabase/types";
 
 // Add a customer to the waiting queue
 export const addCustomer = async (customer: Customer): Promise<void> => {
-  // Use the customer's UUID directly
+  // Convert Preferences to JSON-compatible format
   const supabaseCustomer = {
     id: customer.id,
     name: customer.name,
     phone: customer.phone,
     party_size: customer.partySize,
-    preferences: customer.preferences,
+    preferences: customer.preferences as unknown as Json,
     status: customer.status,
     timestamp: customer.timestamp,
   };
@@ -170,7 +171,7 @@ export const updateCustomer = async (customer: Customer): Promise<void> => {
         name: customer.name,
         phone: customer.phone,
         party_size: customer.partySize,
-        preferences: customer.preferences,
+        preferences: customer.preferences as unknown as Json,
       })
       .eq("id", customer.id);
       

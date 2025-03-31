@@ -2,6 +2,7 @@
 import { supabase } from "../../integrations/supabase/client";
 import { Customer, DailyStatistics } from "../../types";
 import { getCurrentQueue, setCurrentQueue } from "./storage";
+import { Json } from "@/integrations/supabase/types";
 
 // Fetch the latest queue data from the database
 export const fetchQueueFromDatabase = async (): Promise<void> => {
@@ -43,39 +44,35 @@ export const recordDailyStatistics = async (partySize: number): Promise<void> =>
     // Get today's date in format YYYY-MM-DD
     const today = new Date().toISOString().split('T')[0];
     
-    // Check if we already have a record for today
-    const { data: existingData, error: fetchError } = await supabase
-      .from("daily_statistics")
-      .select("*")
-      .eq("date", today)
-      .maybeSingle();
+    // Using a more flexible approach to avoid type errors
+    // First check if we have a record for today
+    const { data: existingStats, error: fetchError } = await supabase
+      .rpc('get_daily_statistics_by_date', { date_param: today });
     
     if (fetchError) {
       console.warn("Failed to fetch daily statistics", fetchError);
       return;
     }
     
-    if (existingData) {
-      // Update existing record
+    if (existingStats && existingStats.length > 0) {
+      // Update existing record using RPC function
       const { error: updateError } = await supabase
-        .from("daily_statistics")
-        .update({
-          groups_count: existingData.groups_count + 1,
-          people_count: existingData.people_count + partySize
-        })
-        .eq("date", today);
+        .rpc('update_daily_statistics', { 
+          date_param: today, 
+          groups_count_increment: 1, 
+          people_count_increment: partySize 
+        });
         
       if (updateError) {
         console.warn("Failed to update daily statistics", updateError);
       }
     } else {
-      // Create new record for today
+      // Insert new record using RPC function
       const { error: insertError } = await supabase
-        .from("daily_statistics")
-        .insert({
-          date: today,
-          groups_count: 1,
-          people_count: partySize
+        .rpc('insert_daily_statistics', {
+          date_param: today,
+          groups_count_value: 1,
+          people_count_value: partySize
         });
         
       if (insertError) {
@@ -90,19 +87,21 @@ export const recordDailyStatistics = async (partySize: number): Promise<void> =>
 // Fetch daily statistics for reporting
 export const fetchDailyStatistics = async (): Promise<DailyStatistics[]> => {
   try {
-    // Get the last 30 days of statistics
+    // Use RPC to get the last 30 days of statistics
     const { data, error } = await supabase
-      .from("daily_statistics")
-      .select("*")
-      .order("date", { ascending: false })
-      .limit(30);
+      .rpc('get_daily_statistics', { limit_param: 30 });
       
     if (error) {
       console.warn("Failed to fetch daily statistics", error);
       return [];
     }
     
-    return data || [];
+    // Convert the raw data to our DailyStatistics type
+    return (data || []).map((item: any) => ({
+      date: item.date,
+      groups_count: item.groups_count,
+      people_count: item.people_count
+    }));
   } catch (error) {
     console.warn("Failed to fetch daily statistics", error);
     return [];

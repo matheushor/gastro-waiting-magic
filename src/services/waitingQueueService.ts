@@ -15,6 +15,7 @@ import {
 import {
   addCustomer as addCustomerToQueue,
   removeCustomer as removeCustomerFromQueue,
+  updateCustomer as updateCustomerInQueue,
   updateCustomerStatus,
   callCustomer as callCustomerFromQueue,
   calculateAverageWaitTime

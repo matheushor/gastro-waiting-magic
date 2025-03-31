@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     hmr: {
-      timeout: 60000, // Increase timeout for HMR
+      timeout: 120000, // Increase timeout for HMR to 2 minutes
     },
     allowedHosts: [
       "27b530cc-768b-4a51-9152-9156fb7ae1d6.lovableproject.com",
