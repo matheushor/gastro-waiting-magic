@@ -40,7 +40,18 @@ const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
       setName(customer.name);
       setPhone(customer.phone);
       setPartySize(customer.partySize);
-      setPreferences(customer.preferences);
+      // Create a new preferences object with default values of false for any missing properties
+      const updatedPreferences: Preferences = {
+        pregnant: false,
+        elderly: false,
+        disabled: false,
+        infant: false,
+        withDog: false,
+        indoor: false,
+        outdoor: false,
+        ...customer.preferences, // Override with actual customer preferences
+      };
+      setPreferences(updatedPreferences);
     }
   }, [customer]);
 
