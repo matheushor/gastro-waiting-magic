@@ -60,16 +60,24 @@ const Admin = () => {
       setDailyStatistics(stats);
     } catch (error) {
       console.error("Erro ao carregar estatísticas diárias:", error);
+      toast.error("Falha ao carregar estatísticas", {
+        description: "Não foi possível carregar as estatísticas diárias. Tente novamente mais tarde."
+      });
     }
   };
 
   const handleLogin = () => {
     setIsLoggedIn(true);
-    toast.success("Login realizado com sucesso!");
+    toast.success("Login realizado com sucesso!", {
+      description: "Bem-vindo ao Painel Administrativo do Quatro Gastro Burger."
+    });
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
+    toast.info("Logout realizado", {
+      description: "Você saiu do sistema com sucesso."
+    });
   };
 
   const handleCallNext = async () => {
@@ -90,13 +98,22 @@ const Admin = () => {
       try {
         const called = await updateCustomerStatus(nextCustomer.id, "called");
         setCalledHistory(prev => [called, ...prev].slice(0, 50));
-        toast.success(`${nextCustomer.name} foi chamado!`);
+        
+        // Enhanced notification
+        toast.success(`${nextCustomer.name} foi chamado!`, {
+          description: `${nextCustomer.partySize} ${nextCustomer.partySize > 1 ? 'pessoas' : 'pessoa'} • Tel: ${nextCustomer.phone}`,
+          duration: 5000,
+        });
       } catch (error) {
         console.error("Erro ao chamar próximo cliente:", error);
-        toast.error("Erro ao chamar próximo cliente. Tente novamente.");
+        toast.error("Erro ao chamar próximo cliente", {
+          description: "Ocorreu um problema ao chamar o próximo cliente. Tente novamente."
+        });
       }
     } else {
-      toast.error("Não há clientes na fila de espera.");
+      toast.error("Fila vazia", {
+        description: "Não há clientes na fila de espera no momento."
+      });
     }
   };
 
@@ -106,7 +123,9 @@ const Admin = () => {
       toast.success("Cliente removido com sucesso!");
     } catch (error) {
       console.error("Erro ao remover cliente:", error);
-      toast.error("Erro ao remover cliente. Tente novamente.");
+      toast.error("Erro ao remover cliente", {
+        description: "Não foi possível remover o cliente. Tente novamente."
+      });
     }
   };
 
@@ -121,10 +140,14 @@ const Admin = () => {
         setCalledHistory(prev => [seatedCustomer, ...prev].slice(0, 50));
       }
       await removeCustomer(id);
-      toast.success("Cliente atendido com sucesso!");
+      toast.success("Cliente atendido com sucesso!", {
+        description: "O cliente foi marcado como atendido e removido da fila."
+      });
     } catch (error) {
       console.error("Erro ao finalizar atendimento:", error);
-      toast.error("Erro ao finalizar atendimento. Tente novamente.");
+      toast.error("Erro ao finalizar atendimento", {
+        description: "Ocorreu um problema ao finalizar o atendimento. Tente novamente."
+      });
     }
   };
 
@@ -132,20 +155,28 @@ const Admin = () => {
     try {
       await addCustomer(customer);
       setActiveTab('waiting');
-      toast.success("Cliente cadastrado com sucesso!");
+      toast.success("Cliente cadastrado com sucesso!", {
+        description: `${customer.name} foi adicionado à fila de espera.`
+      });
     } catch (error) {
       console.error("Erro ao cadastrar cliente:", error);
-      toast.error("Erro ao cadastrar cliente. Tente novamente.");
+      toast.error("Erro ao cadastrar cliente", {
+        description: "Não foi possível cadastrar o cliente. Verifique as informações e tente novamente."
+      });
     }
   };
 
   const handleUpdateCustomer = async (customer: Customer) => {
     try {
       await updateCustomer(customer);
-      toast.success("Cliente atualizado com sucesso!");
+      toast.success("Cliente atualizado com sucesso!", {
+        description: `As informações de ${customer.name} foram atualizadas.`
+      });
     } catch (error) {
       console.error("Erro ao atualizar cliente:", error);
-      toast.error("Erro ao atualizar cliente. Tente novamente.");
+      toast.error("Erro ao atualizar cliente", {
+        description: "Não foi possível atualizar as informações do cliente. Tente novamente."
+      });
     }
   };
 
