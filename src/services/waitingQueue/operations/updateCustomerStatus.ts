@@ -47,18 +47,20 @@ export async function updateCustomerStatus(
     throw error;
   }
 
+  const preferences = data.preferences as unknown as Customer['preferences'];
+
   // Transform the data back to match our Customer type
   const updatedCustomer: Customer = {
     id: data.id,
     name: data.name,
     phone: data.phone,
     partySize: data.party_size,
-    preferences: data.preferences as unknown as Customer['preferences'],
+    preferences: preferences,
     timestamp: data.timestamp,
-    status: data.status,
+    status: data.status as 'waiting' | 'called' | 'seated' | 'left',
     calledAt: data.called_at ? new Date(data.called_at).getTime() : undefined,
-    priority: data.preferences.pregnant || data.preferences.elderly || 
-              data.preferences.disabled || data.preferences.infant,
+    priority: preferences.pregnant || preferences.elderly || 
+              preferences.disabled || preferences.infant,
   };
 
   return updatedCustomer;
